@@ -29,7 +29,7 @@ cdk bootstrap aws://${ACCOUNT}/${REGION} -t Application=${APPLICATION}
 
 ### Deploy the AWS CDK App to build the software binaries and AMI
 
-[AWS CodeBuild](https://docs.aws.amazon.com/codebuild/latest/userguide/welcome.html) is used to automate the compilation of the Open5gs and UERANSIM binaries. AWS CodeBuild is a fully managed build service in the cloud. CodeBuild eliminates the need to provision, manage, and scale your own build servers. Once compilation is complete, the binaries are stored in an Amazon S3 bucket. [EC2 Image Builder](https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html) then fetches the binaries and integrate them with further artefacts into a custom AMI ready to be deployed. EC2 Image Builder is a fully managed AWS service that helps you to automate the creation, management, and deployment of customized, secure, and up-to-date server images. For building secure AMIs and container images, EC2 Image Builder creates [Image pipelines](https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html#image-builder-concepts).
+[AWS CodeBuild](https://docs.aws.amazon.com/codebuild/latest/userguide/welcome.html) is used to automate the compilation of the [Open5gs](https://github.com/open5gs/open5gs) and [UERANSIM](https://github.com/aligungr/UERANSIM) binaries. AWS CodeBuild is a fully managed build service in the cloud. CodeBuild eliminates the need to provision, manage, and scale your own build servers. Once compilation is complete, the binaries are stored in an Amazon S3 bucket. [EC2 Image Builder](https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html) then fetches the binaries and integrate them with further artefacts into a custom AMI ready to be deployed. EC2 Image Builder is a fully managed AWS service that helps you to automate the creation, management, and deployment of customized, secure, and up-to-date server images. For building secure AMIs and container images, EC2 Image Builder creates [Image pipelines](https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html#image-builder-concepts).
 
 From the root of the repository, run the following commands to deploy the CDK app and its stacks
 ```bash
@@ -69,6 +69,7 @@ You can check the status of the software binaries build processes using
 utils/bin/check_artefacts_build_status.sh
 ```
 This is a wrapper around the AWS CLI for EC2 Image Builder and CodeBuild, that will return `SUCCEEDED` or `AVAILABLE` when compilation terminates successfully.
+
 When complete, build the AMIs. The generation of the Enclave image file will take place during the build of the AMI for the parent instance.
 ```bash
 utils/bin/trigger_images_build.sh
