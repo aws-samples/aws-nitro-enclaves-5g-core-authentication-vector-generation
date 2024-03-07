@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Deploys a Cloud9 instance
+Resources:
+  AWSCloud9SSMAccessRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - cloud9.amazonaws.com
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: 'Service linked role for AWS Cloud9'
+      Path: '/service-role/'
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AWSCloud9SSMInstanceProfile
+      RoleName: 'AWSCloud9SSMAccessRole'
+
+  AWSCloud9SSMInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      InstanceProfileName: AWSCloud9SSMInstanceProfile
+      Path: "/cloud9/"
+      Roles: 
+        - 
+          Ref: AWSCloud9SSMAccessRole
+  Cloud9Instance:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties: 
+      Description: "Cloud9 instance to deploy the ARPF enclave setup"
+      ImageId: "amazonlinux-2-x86_64"
+      ConnectionType: "CONNECT_SSM"
+      InstanceType: "t3.micro"
+      Name: "ARPF Enclave"
