@@ -1,0 +1,52 @@
+- ansible.builtin.file:
+    path: '{{ PATCH }}'
+    state: directory
+# - ansible.builtin.copy:
+#     src: adot/etc/upf.yaml
+#     dest: '{{ HOME }}/adot-upf.yaml'
+#     owner: '{{ EC2_USER }}'
+#     group: '{{ EC2_USER }}'
+#     mode: u=rw,g=r,o=r
+#     backup: yes
+# - name: Replace AMP endpoint
+#   ansible.builtin.replace:
+#     path: '{{ HOME }}/adot-upf.yaml'
+#     regexp: 'AMP_ENDPOINT_URL'
+#     replace: '{{ amp_endpoint_url }}'
+# - name: Restart adot collector
+#   ansible.builtin.shell: '{{ ADOT_CMD }} -c {{ HOME }}/adot-upf.yaml -a start'
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/upf.yaml.patch
+    dest: '{{ PATCH }}/upf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/setup-ogstun.sh
+    dest: '{{ HOME }}/setup-ogstun.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-cnf.sh
+    dest: '{{ HOME }}/run-cnf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-upf.sh
+    dest: '{{ HOME }}/run-upf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/stop-upf.sh
+    dest: '{{ HOME }}/stop-upf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes

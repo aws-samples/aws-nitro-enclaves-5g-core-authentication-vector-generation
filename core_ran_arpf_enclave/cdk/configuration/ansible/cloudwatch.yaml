@@ -1,0 +1,20 @@
+- ansible.builtin.file:
+    path: '{{ CLOUDWATCH_CONFIG }}'
+    state: directory
+- ansible.builtin.copy:
+    src: 'cloudwatch/etc/{{ scrapper }}'
+    dest: '{{ CLOUDWATCH_CONFIG }}/{{ scrapper }}'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+  when: scrapper is defined
+- ansible.builtin.copy:
+    src: 'cloudwatch/etc/{{ filename }}'
+    dest: '{{ CLOUDWATCH_CONFIG }}/{{ filename }}'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- name: Restart cloudwatch agent
+  ansible.builtin.shell: '{{ CLOUDWATCH_CMD }} -c file:{{ CLOUDWATCH_CONFIG }}/{{ filename }}'

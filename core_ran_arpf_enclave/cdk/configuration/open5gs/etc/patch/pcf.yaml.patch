@@ -1,0 +1,14 @@
+1c1
+< db_uri: REPLACE_DB_URI
+---
+> db_uri: mongodb://localhost/open5gs
+265,266c265,266
+<       - addr: REPLACE_ENI_IP
+<         port: 7780
+---
+>       - addr: 127.0.0.13
+>         port: 7777
+320c320
+<       - addr: scp.local
+---
+>       - addr: 127.0.1.10

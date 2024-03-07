@@ -1,0 +1,27 @@
+name: InstallDocker
+description: Install packages and configure system for using Docker
+schemaVersion: 1.0
+
+parameters:
+  - EC2-USER:
+      type: string
+      default: ec2-user
+      description: The user on the instance
+
+phases:
+  - name: build
+    steps:
+      - name: InstallDocker
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y docker
+            - usermod -aG docker {{ EC2-USER }}
+  - name: validate
+    steps:
+      - name: CheckDocker
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls -al /usr/bin/docker
+            - docker --version

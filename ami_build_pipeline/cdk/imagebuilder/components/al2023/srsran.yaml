@@ -1,0 +1,74 @@
+name: SrsranBinaries
+description: Install latest SRSRAN binaries built with CodeDeploy
+schemaVersion: 1.0
+
+parameters:
+  - ParameterStorePath:
+      type: string
+      description: The parameter to get the latest build
+  - Region:
+      type: string
+      default: 'eu-central-1'
+      description: The current region
+  - EC2-USER:
+      type: string
+      default: ec2-user
+      description: The user on the instance
+
+phases:
+  - name: build
+    steps:
+      - name: GetLatestBuild
+        action: ExecuteBash
+        inputs:
+          commands:
+            - "echo $(aws ssm get-parameter --name {{ ParameterStorePath }} --region {{ Region }} | jq --raw-output .Parameter.Value | cut -d : -f6-)"
+      - name: GetBinaryIdentifier
+        action: ExecuteBash
+        inputs:
+          commands:
+            - "echo {{ build.GetLatestBuild.outputs.stdout }} | cut -d / -f6"
+      - name: TestLatestBuild
+        action: ExecuteBash
+        inputs:
+          commands:
+            - echo "Check latest build"
+            - echo {{ build.GetLatestBuild.outputs.stdout }}
+            - echo "Validate binary identifier"
+            - echo {{ build.GetBinaryIdentifier.outputs.stdout }}
+            - echo "Validate S3 Path"
+            - echo s3://{{ build.GetLatestBuild.outputs.stdout }}
+            - echo "Check "
+            - aws s3 ls s3://{{ build.GetLatestBuild.outputs.stdout }}
+      - name: DownloadLatestBuilds
+        action: ExecuteBash
+        inputs:
+          commands:
+            - echo "Download latest build"
+            - aws s3 cp s3://{{ build.GetLatestBuild.outputs.stdout }} /opt/
+      - name: UnzipBinaries
+        action: ExecuteBash
+        inputs:
+          commands:
+            - unzip /opt/{{ build.GetBinaryIdentifier.outputs.stdout }} -d /usr/local/
+      - name: CreateLdConfigFile
+        action: CreateFile
+        inputs:
+          - path: /etc/ld.so.conf.d/srsran.conf
+            content: |
+              /usr/local/lib
+              /usr/local/lib64
+            permissions: 0644
+      - name: RunLdConfig
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ldconfig
+
+  - name: validate
+    steps:
+      - name: CheckBinaryLocation
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls /usr/local/bin/

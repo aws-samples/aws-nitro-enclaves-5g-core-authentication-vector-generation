@@ -1,0 +1,33 @@
+name: InstallMongoDBComponents
+description: Install mongo shell (and later DB) for Open5gs usage
+schemaVersion: 1.0
+
+parameters:
+  - Region:
+      type: string
+      default: 'eu-central-1'
+      description: The current region
+
+phases:
+  - name: build
+    steps:
+      - name: InstallShell
+        action: ExecuteBash
+        inputs:
+          commands:
+            - VERSION=1.8.0
+            - if [ `uname -p` = 'aarch64' ]; then ARCH=arm64; else ARCH=x64; fi
+            - wget -c https://downloads.mongodb.com/compass/mongosh-${VERSION}-linux-${ARCH}.tgz
+            - tar xfz mongosh-${VERSION}-linux-${ARCH}.tgz
+            - cd mongosh-${VERSION}-linux-${ARCH}
+            - sudo cp bin/mongosh /usr/local/bin/
+            - sudo cp bin/mongosh_crypt_v1.so /usr/local/lib/
+            - sudo ldconfig
+
+  - name: validate
+    steps:
+      - name: CheckShellBinary
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls /usr/local/bin/mongosh

@@ -1,0 +1,28 @@
+- ansible.builtin.copy:
+    src: ueransim/bin/run-ran-ue.sh
+    dest: '{{ HOME }}/run-ran-ue.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: ueransim/bin/stop-ran-ue.sh
+    dest: '{{ HOME }}/stop-ran-ue.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: ueransim/etc/nr-gnb-config.yaml
+    dest: '{{ HOME }}/ueransim-gnb-config.yaml'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: ueransim/etc/nr-ue-config-01.yaml
+    dest: '{{ HOME }}/ueransim-ue-config-01.yaml'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes

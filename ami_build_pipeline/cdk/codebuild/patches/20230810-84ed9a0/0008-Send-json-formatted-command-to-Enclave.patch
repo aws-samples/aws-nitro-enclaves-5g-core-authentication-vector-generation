@@ -1,0 +1,36 @@
+From 6b525f076e3bea85333fe746d770264e7deaf95b Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Sun, 23 Oct 2022 19:53:58 +0000
+Subject: [PATCH 08/17] Send json formatted command to Enclave
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index fb23725a6..c2b13bffa 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -48,6 +48,10 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+     // Alternative
+     ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",sqn[0],sqn[1],sqn[2],sqn[3],sqn[4],sqn[5]);
+ 
++    // SUPI: 20, AMF: 4, SQN: 12, SNN: 32, RAND: 32
++    char msg[256];
++    sprintf(msg,"{ \"command\": \"ping\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"%s\", \"sqn\": \"%s\", \"snn\": \"%s\", \"rand\": \"%s\" }",supi,amf_string,sqn_string,serving_network_name,rand_string);
++
+     sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+     memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+     vm_addr.svm_family = AF_VSOCK;
+@@ -58,7 +62,6 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+       ogs_error("Error during enclave connection establishment");
+       return OGS_ERROR;
+     }
+-    const char* msg = "{ \"command\": \"ping\", \"source\": \"udm\" }";
+     rv = send(sock_fd, msg, strlen(msg), 0);
+     if (rv < 0) {
+       ogs_error("Error during enclave command transmission");
+-- 
+2.40.1
+

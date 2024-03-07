@@ -1,0 +1,66 @@
+From cc0d17b6440a4918d28f71fe8d1f3d6ac4f59fe7 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 16:28:08 +0000
+Subject: [PATCH 15/17] Prototype successful, need to figure out some
+ corruptions somewhere ;-)
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 23 +++++++++++++----------
+ 1 file changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 5dc59006c..cb54ba8c1 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -312,26 +312,29 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     ck, ik,
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+-            // End of replaced by enclave
++            // End of replaced by enclave, kept for comparison purpose
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
++	    AuthenticationVector.rand = rand_string_enclave;
++	    AuthenticationVector.xres_star = xres_star_string_enclave;
++	    AuthenticationVector.autn = autn_string_enclave;
++	    AuthenticationVector.kausf = kausf_string_enclave;
++
++	    /*
++	    // Kept for debugging purpose
+             ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
+                     rand_string, sizeof(rand_string));
+-            //AuthenticationVector.rand = rand_string;
+-	    AuthenticationVector.rand = rand_string_enclave;
++            AuthenticationVector.rand = rand_string;
+             ogs_hex_to_ascii(xres_star, sizeof(xres_star),
+                     xres_star_string, sizeof(xres_star_string));
+-            //AuthenticationVector.xres_star = xres_star_string;
+-	    AuthenticationVector.xres_star = xres_star_string_enclave;
++            AuthenticationVector.xres_star = xres_star_string;
+             ogs_hex_to_ascii(autn, sizeof(autn),
+                     autn_string, sizeof(autn_string));
+-            //AuthenticationVector.autn = autn_string;
+-	    AuthenticationVector.autn = autn_string_enclave;
++            AuthenticationVector.autn = autn_string;
+             ogs_hex_to_ascii(kausf, sizeof(kausf),
+                     kausf_string, sizeof(kausf_string));
+-            //AuthenticationVector.kausf = kausf_string;
+-	    AuthenticationVector.kausf = kausf_string_enclave;
++            AuthenticationVector.kausf = kausf_string;
+ 
+ 	    // Debug
+             ogs_hex_to_ascii(ck, sizeof(ck),
+@@ -344,7 +347,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 	    ogs_info("5gs xres_star: %s",xres_star_string);
+             ogs_info("5gs autn: %s",autn_string);
+             ogs_info("5gs kausf: %s", kausf_string);
+-
++            */
+             AuthenticationInfoResult.authentication_vector =
+                 &AuthenticationVector;
+ 
+-- 
+2.40.1
+

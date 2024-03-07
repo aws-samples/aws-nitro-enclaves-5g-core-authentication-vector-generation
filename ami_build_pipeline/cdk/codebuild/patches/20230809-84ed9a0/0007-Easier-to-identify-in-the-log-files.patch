@@ -1,0 +1,26 @@
+From 89f14b5cd4adaab9af4b5ba51326867d2fe34672 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Sun, 23 Oct 2022 19:26:48 +0000
+Subject: [PATCH 07/16] Easier to identify in the log files
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index e5be65a7d..fb23725a6 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -39,7 +39,7 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+     ogs_hex_to_ascii(sqn, sizeof(sqn_string),sqn_string, sizeof(sqn_string));
+     ogs_hex_to_ascii(rand, sizeof(rand_string),rand_string, sizeof(rand_string));
+ 
+-    ogs_info("Enclave offloading");
++    ogs_warn("Enclave offloading");
+     ogs_info("json inputs for %s", supi);
+     ogs_info("amf: %s",amf_string);
+     ogs_info("sqn: %s",sqn_string);
+-- 
+2.41.0
+

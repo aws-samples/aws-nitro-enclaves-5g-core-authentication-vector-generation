@@ -1,0 +1,222 @@
+From 906a9dd724f19c0099f8cc25a7b674c6cdf3d798 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Tue, 25 Oct 2022 09:06:02 +0000
+Subject: [PATCH 16/17] Enclave only deployment
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudm-handler.c | 24 +++++++------
+ src/udm/nudr-handler.c | 82 +++++++++++++++++++++++-------------------
+ 2 files changed, 60 insertions(+), 46 deletions(-)
+
+diff --git a/src/udm/nudm-handler.c b/src/udm/nudm-handler.c
+index 2c4968320..f6ee98731 100644
+--- a/src/udm/nudm-handler.c
++++ b/src/udm/nudm-handler.c
+@@ -153,9 +153,9 @@ bool udm_nudm_ueau_handle_get(
+         uint8_t sqn_ms[OGS_SQN_LEN];
+         uint8_t mac_s[OGS_MAC_S_LEN];
+         uint64_t sqn = 0;
+-	// Debug
++/*	// Debug
+         char sqn_ms_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
+-	char mac_s_string[OGS_KEYSTRLEN(OGS_MAC_S_LEN)];
++	char mac_s_string[OGS_KEYSTRLEN(OGS_MAC_S_LEN)]; */
+ 
+         if (!ResynchronizationInfo->rand) {
+             ogs_error("[%s] No RAND", udm_ue->suci);
+@@ -178,6 +178,7 @@ bool udm_nudm_ueau_handle_get(
+         ogs_ascii_to_hex(
+             ResynchronizationInfo->rand, strlen(ResynchronizationInfo->rand),
+             rand, sizeof(rand));
++	ogs_warn("RAND from resync: %s",ResynchronizationInfo->rand);
+         ogs_ascii_to_hex(
+             ResynchronizationInfo->auts, strlen(ResynchronizationInfo->auts),
+             auts, sizeof(auts));
+@@ -197,18 +198,21 @@ bool udm_nudm_ueau_handle_get(
+ 	// Can be replaced as well: see milenage.py generate_resync
+ 	ogs_info("MAC resync %s",udm_ue->supi);
+ 	enclave_resync(udm_ue->supi,rand,auts,sqn_ms,mac_s);
+-        ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
++/*        // Debug
++	ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
+         ogs_hex_to_ascii(mac_s, sizeof(mac_s_string),mac_s_string, sizeof(mac_s_string));
+ 	ogs_info("sqn_ms enclave: %s",sqn_ms_string);
+-	ogs_info("mac_s enclave: %s",mac_s_string);
++	ogs_info("mac_s enclave: %s",mac_s_string); */
+ 
+-	//ogs_auc_sqn(udm_ue->opc, udm_ue->k, rand, auts, sqn_ms, mac_s);
++	// Replaced by Enclave offloading
++	/*
++	ogs_auc_sqn(udm_ue->opc, udm_ue->k, rand, auts, sqn_ms, mac_s);
+         // Debug
+-	//ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
+-        //ogs_hex_to_ascii(mac_s, sizeof(mac_s_string),mac_s_string, sizeof(mac_s_string));
+-	//ogs_info("sqn_ms: %s",sqn_ms_string);
+-	//ogs_info("mac_s: %s",mac_s_string);
+-
++	ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
++        ogs_hex_to_ascii(mac_s, sizeof(mac_s_string),mac_s_string, sizeof(mac_s_string));
++	ogs_info("sqn_ms: %s",sqn_ms_string);
++	ogs_info("mac_s: %s",mac_s_string);
++        */
+         if (memcmp(auts + OGS_SQN_LEN, mac_s, OGS_MAC_S_LEN) != 0) {
+             ogs_error("[%s] Re-synch MAC failed", udm_ue->suci);
+             ogs_log_print(OGS_LOG_ERROR, "[MAC_S] ");
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index cb54ba8c1..1ff8750d9 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -40,13 +40,13 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+     ogs_hex_to_ascii(rand_5gs, sizeof(rand_input_string),rand_input_string, sizeof(rand_input_string));
+ 
+     ogs_warn("Enclave offloading");
+-    ogs_info("json inputs for %s", supi);
+-    ogs_info("amf: %s",amf_input_string);
+-    ogs_info("sqn: %s",sqn_input_string);
+-    ogs_info("snn: %s",serving_network_name);
+-    ogs_info("rand: %s",rand_input_string);
++    ogs_debug("json inputs for %s", supi);
++    ogs_debug("amf: %s",amf_input_string);
++    ogs_debug("sqn: %s",sqn_input_string);
++    ogs_debug("snn: %s",serving_network_name);
++    ogs_debug("rand: %s",rand_input_string);
+     // Alternative
+-    ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",sqn[0],sqn[1],sqn[2],sqn[3],sqn[4],sqn[5]);
++    ogs_debug("sqn %02X:%02X:%02X:%02X:%02X:%02X",sqn[0],sqn[1],sqn[2],sqn[3],sqn[4],sqn[5]);
+ 
+     // SUPI: 20, AMF: 4, SQN: 12, SNN: 32, RAND: 32
+     char msg[256];
+@@ -85,7 +85,7 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+       if (strcmp(result,"success")==0) {
+         ogs_warn("Received \"success\" from Enclave. Parse further");
+         sscanf(buf, "{\"Status\": \"success\", \"Response\": {\"rand\": \"%32c\", \"xres_star\": \"%32c\", \"autn\": \"%32c\", \"kausf\": \"%64c\"}}",rand_string,xres_star_string,autn_string,kausf_string);
+-        ogs_info("Enclave xrs: %.32s",xres_star_string);
++        ogs_info("Enclave xres_star: %.32s",xres_star_string);
+         ogs_info("Enclave autn: %.32s",autn_string);
+         ogs_info("Enclave kausf: %.64s",kausf_string);
+       } else {
+@@ -123,7 +123,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ #endif
+     static int step = 0;
+ #endif
+-
++/*
+     uint8_t autn[OGS_AUTN_LEN];
+     uint8_t ik[OGS_KEY_LEN];
+     uint8_t ck[OGS_KEY_LEN];
+@@ -132,17 +132,19 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     size_t xres_len = 8;
+     uint8_t xres_star[OGS_MAX_RES_LEN];
+     uint8_t kausf[OGS_SHA256_DIGEST_SIZE];
+-
++*/
+     char rand_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++/*
+     char autn_string[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
++*/
+     char rand_string_enclave[OGS_KEYSTRLEN(OGS_RAND_LEN)];
+     char autn_string_enclave[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string_enclave[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string_enclave[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
+-    char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
+-    char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
++    //char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
++    //char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
+ 
+     OpenAPI_authentication_subscription_t *AuthenticationSubscription = NULL;
+     OpenAPI_authentication_info_result_t AuthenticationInfoResult;
+@@ -290,13 +292,14 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             else step = 0;
+ #endif
+ #endif
+-            // rmz: Offload to Enclave
++            // Offload to Enclave
+ 	    ogs_assert(udm_ue->serving_network_name);
+ 	    enclave_generate_auth_vector(udm_ue->supi, udm_ue->amf, udm_ue->sqn,
+                                          udm_ue->serving_network_name, udm_ue->rand,
+                                          rand_string_enclave,xres_star_string_enclave, autn_string_enclave, kausf_string_enclave);
+             // Replaced by Enclave
+-            milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
++/*
++	    milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+             ogs_assert(udm_ue->serving_network_name);
+@@ -313,41 +316,48 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+             // End of replaced by enclave, kept for comparison purpose
+-            memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
++*/
++	    memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
++	    // Use Enclave result
++	    ogs_warn("Using Enclave results");
+ 	    AuthenticationVector.rand = rand_string_enclave;
+ 	    AuthenticationVector.xres_star = xres_star_string_enclave;
+ 	    AuthenticationVector.autn = autn_string_enclave;
+ 	    AuthenticationVector.kausf = kausf_string_enclave;
+ 
+-	    /*
+-	    // Kept for debugging purpose
++
++	    // Use Open5gs result (or use for debugging info)
+             ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
+                     rand_string, sizeof(rand_string));
+-            AuthenticationVector.rand = rand_string;
+-            ogs_hex_to_ascii(xres_star, sizeof(xres_star),
+-                    xres_star_string, sizeof(xres_star_string));
+-            AuthenticationVector.xres_star = xres_star_string;
+-            ogs_hex_to_ascii(autn, sizeof(autn),
+-                    autn_string, sizeof(autn_string));
+-            AuthenticationVector.autn = autn_string;
+-            ogs_hex_to_ascii(kausf, sizeof(kausf),
+-                    kausf_string, sizeof(kausf_string));
+-            AuthenticationVector.kausf = kausf_string;
++            //AuthenticationVector.rand = rand_string;
++            //ogs_hex_to_ascii(xres_star, sizeof(xres_star),
++            //        xres_star_string, sizeof(xres_star_string));
++            //AuthenticationVector.xres_star = xres_star_string;
++            //ogs_hex_to_ascii(autn, sizeof(autn),
++            //        autn_string, sizeof(autn_string));
++            //AuthenticationVector.autn = autn_string;
++            //ogs_hex_to_ascii(kausf, sizeof(kausf),
++            //        kausf_string, sizeof(kausf_string));
++            //AuthenticationVector.kausf = kausf_string;
+ 
+ 	    // Debug
+-            ogs_hex_to_ascii(ck, sizeof(ck),
+-	             ck_string, sizeof(ck_string));
+-            ogs_hex_to_ascii(ik, sizeof(ik),
+-		             ik_string, sizeof(ik_string));
+-	    ogs_info("5gs ik: %s",ik_string);
+-	    ogs_info("5gs ck: %s",ck_string);
++            //ogs_hex_to_ascii(ck, sizeof(ck),
++	    //         ck_string, sizeof(ck_string));
++            //ogs_hex_to_ascii(ik, sizeof(ik),
++            //             ik_string, sizeof(ik_string));
++	    //ogs_info("5gs ik: %s",ik_string);
++	    //ogs_info("5gs ck: %s",ck_string);
+ 	    ogs_info("5gs rand: %s",rand_string);
+-	    ogs_info("5gs xres_star: %s",xres_star_string);
+-            ogs_info("5gs autn: %s",autn_string);
+-            ogs_info("5gs kausf: %s", kausf_string);
+-            */
++	    ogs_info("Enclave rand: %s",rand_string);
++            //ogs_info("5gs xres_star: %s",xres_star_string);
++	    ogs_info("Enclave autn: %.32s",autn_string_enclave);
++            //ogs_info("5gs autn: %s",autn_string);
++	    ogs_info("Enclave kausf: %.64s",kausf_string_enclave);
++            //ogs_info("5gs kausf: %s", kausf_string);
++            // Check auth vector info
++	    ogs_info("AV: rand %.32s xres_star %.32s autn %.32s kausf %.64s",AuthenticationVector.rand,AuthenticationVector.xres_star,AuthenticationVector.autn,AuthenticationVector.kausf);
+             AuthenticationInfoResult.authentication_vector =
+                 &AuthenticationVector;
+ 
+-- 
+2.40.1
+

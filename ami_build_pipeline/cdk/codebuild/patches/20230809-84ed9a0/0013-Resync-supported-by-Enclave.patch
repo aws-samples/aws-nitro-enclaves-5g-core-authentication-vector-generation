@@ -1,0 +1,183 @@
+From 4e35c4d2ae31b96a206b608f351d0b2914bb8a12 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 15:21:24 +0000
+Subject: [PATCH 13/16] Resync supported by Enclave
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudm-handler.c | 84 +++++++++++++++++++++++++++++++++++++++++-
+ src/udm/nudm-handler.h |  2 +
+ src/udm/nudr-handler.c | 14 +++----
+ 3 files changed, 92 insertions(+), 8 deletions(-)
+
+diff --git a/src/udm/nudm-handler.c b/src/udm/nudm-handler.c
+index c41c702c2..2c4968320 100644
+--- a/src/udm/nudm-handler.c
++++ b/src/udm/nudm-handler.c
+@@ -20,6 +20,73 @@
+ #include "sbi-path.h"
+ #include "nnrf-handler.h"
+ #include "nudm-handler.h"
++#include <linux/vm_sockets.h>
++#include "unistd.h"
++
++bool enclave_resync(char* supi,uint8_t* rand,
++                    uint8_t* auts,uint8_t*sqn_ms,uint8_t* mac_s)
++{
++    int rv = 0;
++    struct sockaddr_vm vm_addr;
++    int sock_fd = 0;
++
++    char auts_input_string[OGS_KEYSTRLEN(OGS_AUTS_LEN)];
++    char rand_input_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++    char sqn_ms_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
++    char mac_s_string[OGS_KEYSTRLEN(OGS_MAC_S_LEN)];
++    ogs_hex_to_ascii(auts, sizeof(auts_input_string),auts_input_string, sizeof(auts_input_string));
++    ogs_hex_to_ascii(rand, sizeof(rand_input_string),rand_input_string, sizeof(rand_input_string));
++    ogs_warn("Enclave resync: %s",supi);
++    ogs_info("auts: %s",auts_input_string);
++    ogs_info("rand: %s",rand_input_string);
++
++    char msg[256];
++    sprintf(msg,"{ \"command\": \"resync\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"0000\", \"auts\": \"%s\", \"rand\": \"%s\" }",supi,auts_input_string,rand_input_string);
++
++    sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
++    memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
++    vm_addr.svm_family = AF_VSOCK;
++    vm_addr.svm_port = 8888;
++    vm_addr.svm_cid = 12;
++    rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++    if (rv < 0) {
++      ogs_error("Error during enclave connection establishment");
++      return OGS_ERROR;
++    }
++    rv = send(sock_fd, msg, strlen(msg), 0);
++    if (rv < 0) {
++      ogs_error("Error during enclave command transmission");
++      return OGS_ERROR;
++    }
++    char buf[1024];
++    //char response[1024];
++    size_t msg_len;
++    size_t last_msg_len = 0;
++    while ((msg_len = recv(sock_fd, &buf, 1024, 0)) > 0) {
++      ogs_info("Received %lu bytes:\n%.*s\n", msg_len, (int)msg_len,buf);
++      last_msg_len = msg_len;
++    }
++    close(sock_fd);
++    // Parse the result
++    // Typicaly result
++    // {"Status": "success", "Response": {"sqn_ms": "000000000000", "mac_s": "d1e2debf3ef48e92"}}
++    if (last_msg_len == 90) {
++      char result[20];
++      sscanf( buf, "{\"Status\": \"%7c\"", (char *)&result );
++      if (strcmp(result,"success")==0) {
++        ogs_warn("Received \"success\" from Enclave. Parse further");
++        sscanf(buf, "{\"Status\": \"success\", \"Response\": {\"sqn_ms\": \"%12c\", \"mac_s\": \"%16c\"}}",sqn_ms_string,mac_s_string);
++        ogs_info("Enclave sqn_ms: %.12s (%lu)",sqn_ms_string,sizeof(sqn_ms));
++        ogs_info("Enclave mac_s: %.16s (%lu)",mac_s_string,sizeof(mac_s));
++	ogs_ascii_to_hex(sqn_ms_string,strlen(sqn_ms_string),sqn_ms,sizeof(sqn_ms));
++	ogs_ascii_to_hex(mac_s_string,strlen(mac_s_string),mac_s,sizeof(mac_s));
++      } else {
++         return OGS_ERROR;
++      }
++    }
++
++    return OGS_OK;
++}
+ 
+ bool udm_nudm_ueau_handle_get(
+     udm_ue_t *udm_ue, ogs_sbi_stream_t *stream, ogs_sbi_message_t *recvmsg)
+@@ -86,6 +153,9 @@ bool udm_nudm_ueau_handle_get(
+         uint8_t sqn_ms[OGS_SQN_LEN];
+         uint8_t mac_s[OGS_MAC_S_LEN];
+         uint64_t sqn = 0;
++	// Debug
++        char sqn_ms_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
++	char mac_s_string[OGS_KEYSTRLEN(OGS_MAC_S_LEN)];
+ 
+         if (!ResynchronizationInfo->rand) {
+             ogs_error("[%s] No RAND", udm_ue->suci);
+@@ -125,7 +195,19 @@ bool udm_nudm_ueau_handle_get(
+         }
+ 
+ 	// Can be replaced as well: see milenage.py generate_resync
+-        ogs_auc_sqn(udm_ue->opc, udm_ue->k, rand, auts, sqn_ms, mac_s);
++	ogs_info("MAC resync %s",udm_ue->supi);
++	enclave_resync(udm_ue->supi,rand,auts,sqn_ms,mac_s);
++        ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
++        ogs_hex_to_ascii(mac_s, sizeof(mac_s_string),mac_s_string, sizeof(mac_s_string));
++	ogs_info("sqn_ms enclave: %s",sqn_ms_string);
++	ogs_info("mac_s enclave: %s",mac_s_string);
++
++	//ogs_auc_sqn(udm_ue->opc, udm_ue->k, rand, auts, sqn_ms, mac_s);
++        // Debug
++	//ogs_hex_to_ascii(sqn_ms, sizeof(sqn_ms_string),sqn_ms_string, sizeof(sqn_ms_string));
++        //ogs_hex_to_ascii(mac_s, sizeof(mac_s_string),mac_s_string, sizeof(mac_s_string));
++	//ogs_info("sqn_ms: %s",sqn_ms_string);
++	//ogs_info("mac_s: %s",mac_s_string);
+ 
+         if (memcmp(auts + OGS_SQN_LEN, mac_s, OGS_MAC_S_LEN) != 0) {
+             ogs_error("[%s] Re-synch MAC failed", udm_ue->suci);
+diff --git a/src/udm/nudm-handler.h b/src/udm/nudm-handler.h
+index 581878cda..6ea34800f 100644
+--- a/src/udm/nudm-handler.h
++++ b/src/udm/nudm-handler.h
+@@ -26,6 +26,8 @@
+ extern "C" {
+ #endif
+ 
++bool enclave_resync(char* supi,uint8_t* rand,
++                    uint8_t* auts,uint8_t*sqn_ms,uint8_t* mac_s);
+ bool udm_nudm_ueau_handle_get(
+     udm_ue_t *udm_ue, ogs_sbi_stream_t *stream, ogs_sbi_message_t *recvmsg);
+ bool udm_nudm_ueau_handle_result_confirmation_inform(
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index c57e643fc..5b49d22c4 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -127,9 +127,9 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     uint8_t autn[OGS_AUTN_LEN];
+     uint8_t ik[OGS_KEY_LEN];
+     uint8_t ck[OGS_KEY_LEN];
+-    uint8_t ak[OGS_AK_LEN];
+-    uint8_t xres[OGS_MAX_RES_LEN];
+-    size_t xres_len = 8;
++    // uint8_t ak[OGS_AK_LEN]; // Not needed with offloading to Enclave
++    //uint8_t xres[OGS_MAX_RES_LEN];
++    //size_t xres_len = 8;
+     uint8_t xres_star[OGS_MAX_RES_LEN];
+     uint8_t kausf[OGS_SHA256_DIGEST_SIZE];
+ 
+@@ -295,24 +295,24 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 	    enclave_generate_auth_vector(udm_ue->supi, udm_ue->amf, udm_ue->sqn,
+                                          udm_ue->serving_network_name, udm_ue->rand,
+                                          rand_string_enclave,xres_star_string_enclave, autn_string_enclave, kausf_string_enclave);
+-
++            /* Replaced by Enclave
+             milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+             ogs_assert(udm_ue->serving_network_name);
+ 
+-            /* TS33.501 Annex A.2 : Kausf derviation function */
++            // TS33.501 Annex A.2 : Kausf derviation function
+             ogs_kdf_kausf(
+                     ck, ik,
+                     udm_ue->serving_network_name, autn,
+                     kausf);
+ 
+-            /* TS33.501 Annex A.4 : RES* and XRES* derivation function */
++            // TS33.501 Annex A.4 : RES* and XRES* derivation function
+             ogs_kdf_xres_star(
+                     ck, ik,
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+-
++            */
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+-- 
+2.41.0
+

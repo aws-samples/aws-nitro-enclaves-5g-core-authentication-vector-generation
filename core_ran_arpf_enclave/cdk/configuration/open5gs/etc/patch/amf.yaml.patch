@@ -1,0 +1,35 @@
+474,475c474,475
+<       - addr: REPLACE_ENI_IP
+<         port: 7779
+---
+>       - addr: 127.0.0.5
+>         port: 7777
+477c477
+<       - addr: core.local
+---
+>       - addr: 127.0.0.5
+488,493d487
+<       - plmn_id:
+<           mcc: 001
+<           mnc: 01
+<         amf_id:
+<           region: 2
+<           set: 1
+498,502c492
+<         tac: [1,101,201]
+<       - plmn_id:
+<           mcc: 001
+<           mnc: 01
+<         tac: [1,101,201]
+---
+>         tac: 1
+509,513d498
+<       - plmn_id:
+<           mcc: 001
+<           mnc: 01
+<         s_nssai:
+<           - sst: 1
+587c572
+<       - addr: scp.local
+---
+>       - addr: 127.0.1.10

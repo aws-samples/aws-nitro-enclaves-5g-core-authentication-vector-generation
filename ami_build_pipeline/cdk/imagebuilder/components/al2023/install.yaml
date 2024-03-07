@@ -1,0 +1,34 @@
+name: InstallPackages
+description: Install various basic packages
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: UpdateAll
+        action: ExecuteBash
+        inputs:
+          commands:
+            - 'dnf update -y'
+      - name: GetAWSBasics
+        action: ExecuteBash
+        inputs:
+          commands:
+            - 'dnf install -y amazon-ssm-agent awscli-2 amazon-cloudwatch-agent'
+      - name: GetBasics
+        action: ExecuteBash
+        inputs:
+          commands:
+            - 'dnf install -y jq mtr tmux tcpdump iperf3 htop'
+      - name: GetAnsible
+        action: ExecuteBash
+        inputs:
+          commands:
+            - 'dnf install -y pip python3-jinja2 python3-packaging python3-markupsafe'
+            - 'python3 -m pip install ansible'
+      - name: GetBoto3AndMore
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y python3-wheel python3-requests python3-cryptography
+            - pip3 install boto3

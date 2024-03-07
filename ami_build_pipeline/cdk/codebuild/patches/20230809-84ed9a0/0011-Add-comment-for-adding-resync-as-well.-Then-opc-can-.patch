@@ -1,0 +1,26 @@
+From d66323623dfa9c45c1ed2e87eb44fc5ead7d1c07 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 08:13:39 +0000
+Subject: [PATCH 11/16] Add comment for adding resync as well. Then opc can be
+ completely ignored
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudm-handler.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/udm/nudm-handler.c b/src/udm/nudm-handler.c
+index 18d5b56bb..c41c702c2 100644
+--- a/src/udm/nudm-handler.c
++++ b/src/udm/nudm-handler.c
+@@ -124,6 +124,7 @@ bool udm_nudm_ueau_handle_get(
+             return false;
+         }
+ 
++	// Can be replaced as well: see milenage.py generate_resync
+         ogs_auc_sqn(udm_ue->opc, udm_ue->k, rand, auts, sqn_ms, mac_s);
+ 
+         if (memcmp(auts + OGS_SQN_LEN, mac_s, OGS_MAC_S_LEN) != 0) {
+-- 
+2.41.0
+

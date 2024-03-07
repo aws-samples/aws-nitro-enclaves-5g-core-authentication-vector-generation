@@ -1,0 +1,151 @@
+{
+    "agent": {
+        "metrics_collection_interval": 10,
+        "omit_hostname": false
+    },
+    "metrics": {
+        "namespace": "Open5gs/InstanceMetrics",
+        "append_dimensions": {
+            "ImageId": "${aws:ImageId}",
+            "InstanceId": "${aws:InstanceId}",
+            "InstanceType": "${aws:InstanceType}"
+        },
+        "metrics_collected": {
+            "mem": {
+                "measurement": [
+                    "mem_used_percent"
+                ]
+            },
+            "disk": {
+                "measurement": [
+                    "disk_used_percent"
+                ]
+            },
+            "swap": {
+                "measurement": [
+                    "swap_used_percent"
+                ]
+            },
+            "net": {
+                "measurement": [
+                    "bytes_sent",
+                    "bytes_recv",
+                    "drop_in",
+                    "drop_out",
+                    "err_in",
+                    "err_out",
+                    "packets_sent",
+                    "packets_recv"
+                ]
+            }
+        }
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                     {
+                         "file_path": "/var/log/amazon/amazon-cloudwatch-agent/*.log",
+                         "log_group_name": "/ec2/instances/var/log/amazon/amazon-cloudwatch-agent.log",
+                         "log_stream_name": "{instance_id}",
+                         "timestamp_format": "%H: %M: %S%y%b%-d",
+                         "retention_in_days": 7
+                     },
+                    {
+                        "file_path": "/var/log/messages",
+                        "log_group_name": "/ec2/instances/var/log/messages.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/udr.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/udr.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/udm.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/udm.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/ausf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/ausf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/upf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/upf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/amf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/amf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/smf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/smf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/pcf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/pcf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/bsf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/bsf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/nssf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/nssf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/nrf.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/nrf.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    },
+                    {
+                        "file_path": "/var/log/open5gs/scp.log",
+                        "log_group_name": "/ec2/instances/var/log/open5gs/scp.log",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%H: %M: %S%y%b%-d",
+                        "retention_in_days": 7
+                    }
+                ]
+            }
+        },
+        "metrics_collected":{
+            "prometheus":{
+                "cluster_name":"core-prometheus-cluster",
+                "log_group_name":"/ec2/prometheus.log",
+                "prometheus_config_path":"/usr/local/etc/cloudwatch/scrapper.yaml"
+            }
+        },
+        "log_stream_name": "default_log_stream",
+        "force_flush_interval": 5
+    }
+}

@@ -1,0 +1,215 @@
+From 13560127c78c767263094e64b1623bcaa7c18970 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Fri, 21 Oct 2022 13:36:24 +0000
+Subject: [PATCH 01/17] UDM can talk to Enclave and receive response
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ lib/app/ogs-app.h      |  1 +
+ src/udm/app.c          | 39 +++++++++++++++++++++++++++++++++++++++
+ src/udm/nudr-handler.c | 33 ++++++++++++++++++++++++++++++++-
+ src/udr/nudr-handler.c | 13 ++++++++++---
+ 4 files changed, 82 insertions(+), 4 deletions(-)
+
+diff --git a/lib/app/ogs-app.h b/lib/app/ogs-app.h
+index 53361c6d9..6637a9930 100644
+--- a/lib/app/ogs-app.h
++++ b/lib/app/ogs-app.h
+@@ -41,6 +41,7 @@ extern "C" {
+ #endif
+ 
+ int app_initialize(const char *const argv[]);
++int check_enclave(void);
+ void app_terminate(void);
+ 
+ int mme_initialize(void);
+diff --git a/src/udm/app.c b/src/udm/app.c
+index ab55a8a04..bbc49fa6d 100644
+--- a/src/udm/app.c
++++ b/src/udm/app.c
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "ogs-app.h"
++#include <linux/vm_sockets.h>
+ 
+ int app_initialize(const char *const argv[])
+ {
+@@ -28,11 +29,49 @@ int app_initialize(const char *const argv[])
+         ogs_error("Failed to intialize UDM");
+         return rv;
+     }
++    rv = check_enclave();
++    if (rv != OGS_OK) {
++	ogs_warn("No enclave available");
++    }
+     ogs_info("UDM initialize...done");
+ 
+     return OGS_OK;
+ }
+ 
++int check_enclave(void)
++{
++    int rv;
++    struct sockaddr_vm vm_addr;
++    int sock_fd = 0;
++
++    ogs_info("Check enclave availability");
++
++    sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
++    memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
++    vm_addr.svm_family = AF_VSOCK;
++    vm_addr.svm_port = 8888; //strtol("8888", NULL, 10);
++    vm_addr.svm_cid = 12; //strtol("12", NULL, 10);
++    rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++    if (rv < 0) {
++      ogs_error("Error during enclave connection establishment");
++    }
++    const char* msg = "{ \"command\": \"echo\", \"argument\": \"udm\" }";
++    rv = send(sock_fd, msg, strlen(msg), 0);
++    if (rv < 0) {
++      ogs_error("Error during enclave command transmission");
++    }
++    char buf[1024];
++    char response[1024];
++    size_t msg_len;
++    while ((msg_len = recv(sock_fd, &buf, 1024, 0)) > 0) {
++      strncpy(response,buf,msg_len);
++      response[msg_len] = '\0';
++      ogs_info("Received %lu bytes:\n%s\n", msg_len, response);
++    }
++
++    return OGS_OK;
++}
++
+ void app_terminate(void)
+ {
+     udm_terminate();
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 466ea0b6e..4816e7c42 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -61,6 +61,8 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     char autn_string[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
++    char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)];
++    char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)];
+ 
+     OpenAPI_authentication_subscription_t *AuthenticationSubscription = NULL;
+     OpenAPI_authentication_info_result_t AuthenticationInfoResult;
+@@ -178,6 +180,11 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                 AuthenticationSubscription->sequence_number->sqn,
+                 strlen(AuthenticationSubscription->sequence_number->sqn),
+                 udm_ue->sqn, sizeof(udm_ue->sqn));
++	    ogs_info("opc,k,amf,sqn: %s, %s, %s, %s",
++			    AuthenticationSubscription->enc_opc_key,
++                            AuthenticationSubscription->enc_permanent_key,
++			    AuthenticationSubscription->authentication_management_field,
++			    AuthenticationSubscription->sequence_number->sqn);
+ 
+         CASE(OGS_SBI_HTTP_METHOD_PATCH)
+             if (recvmsg->res_status != OGS_SBI_HTTP_STATUS_OK &&
+@@ -209,11 +216,31 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ #endif
+ #endif
+ 
+-            milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
++	    // Debug
++	    ogs_info("OGS_KEY_LEN in bytes: %d (%d bits)",OGS_KEY_LEN,OGS_KEY_LEN*8);
++	    ogs_info("Generate CK, IK and others: UE supi %s, suci %s",udm_ue->supi,udm_ue->suci);
++
++	    milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
++	    // hex_to_ascii called here to print autn
++            ogs_hex_to_ascii(autn, sizeof(autn),
++		             autn_string, sizeof(autn_string));
++	    ogs_info("autn: %s",autn_string);
++            ogs_hex_to_ascii(ck, sizeof(ck),
++		             ck_string, sizeof(ck_string));
++	    ogs_info("ck: %s",ck_string);
++            ogs_hex_to_ascii(ik, sizeof(ik),
++		             ik_string, sizeof(ik_string));
++	    ogs_info("ik: %s",ik_string);
++
++
++            // rmz: insert here parallel concept code
++
+             ogs_assert(udm_ue->serving_network_name);
+ 
++	    ogs_info("Calling KDF for kausf");
++	    ogs_info("Serving_network_name: %s",udm_ue->serving_network_name);
+             /* TS33.501 Annex A.2 : Kausf derviation function */
+             ogs_kdf_kausf(
+                     ck, ik,
+@@ -226,6 +253,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+ 
++	    ogs_info("Preparing AV");
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+@@ -242,6 +270,9 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     kausf_string, sizeof(kausf_string));
+             AuthenticationVector.kausf = kausf_string;
+ 
++	    //ogs_info("kausf hex: %s", kausf);
++            ogs_info("kausf string: %s", kausf_string);
++
+             AuthenticationInfoResult.authentication_vector =
+                 &AuthenticationVector;
+ 
+diff --git a/src/udr/nudr-handler.c b/src/udr/nudr-handler.c
+index 3927fee2f..602203fe6 100644
+--- a/src/udr/nudr-handler.c
++++ b/src/udr/nudr-handler.c
+@@ -71,6 +71,8 @@ bool udr_nudr_dr_handle_subscription_authentication(
+                 recvmsg, "Cannot find SUPI Type", supi));
+         return false;
+     }
++    if (rv == OGS_OK )
++      ogs_info("SUPI found and auth_info updated");
+ 
+     SWITCH(recvmsg->h.resource.component[3])
+     CASE(OGS_SBI_RESOURCE_NAME_AUTHENTICATION_SUBSCRIPTION)
+@@ -85,18 +87,22 @@ bool udr_nudr_dr_handle_subscription_authentication(
+             ogs_hex_to_ascii(auth_info.k, sizeof(auth_info.k),
+                     k_string, sizeof(k_string));
+             AuthenticationSubscription.enc_permanent_key = k_string;
++	    ogs_info("Got k from auth info");
+ 
+             ogs_hex_to_ascii(auth_info.amf, sizeof(auth_info.amf),
+                     amf_string, sizeof(amf_string));
+             AuthenticationSubscription.authentication_management_field =
+                     amf_string;
++            ogs_info("Got amf from auth_info");
+ 
+-            if (!auth_info.use_opc)
++	    if (!auth_info.use_opc) {
++		ogs_info("Calling milenage_opc to get opc from op and k");
+                 milenage_opc(auth_info.k, auth_info.op, auth_info.opc);
+-
++	    }
+             ogs_hex_to_ascii(auth_info.opc, sizeof(auth_info.opc),
+                     opc_string, sizeof(opc_string));
+             AuthenticationSubscription.enc_opc_key = opc_string;
++            ogs_info("Got opc from auth_info");
+ 
+             ogs_uint64_to_buffer(auth_info.sqn, OGS_SQN_LEN, sqn);
+             ogs_hex_to_ascii(sqn, sizeof(sqn), sqn_string, sizeof(sqn_string));
+@@ -104,8 +110,9 @@ bool udr_nudr_dr_handle_subscription_authentication(
+             memset(&SequenceNumber, 0, sizeof(SequenceNumber));
+             SequenceNumber.sqn = sqn_string;
+             AuthenticationSubscription.sequence_number = &SequenceNumber;
++            ogs_info("Got sqn from auth_info");
+ 
+-            memset(&sendmsg, 0, sizeof(sendmsg));
++	    memset(&sendmsg, 0, sizeof(sendmsg));
+ 
+             ogs_assert(AuthenticationSubscription.authentication_method);
+             sendmsg.AuthenticationSubscription =
+-- 
+2.40.1
+

@@ -1,0 +1,47 @@
+- ansible.builtin.copy:
+    src: shard/bin/run-shard.sh
+    dest: '/usr/local/bin/run-shard.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: shard/bin/stop-shard.sh
+    dest: '/usr/local/bin/stop-shard.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: shard/bin/shard_frontend.py
+    dest: '/usr/local/bin/shard_frontend.py'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/decrypt_base64_subscriber_data.sh
+    dest: '/usr/local/bin/decrypt_base64_subscriber_data.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/get-encrypted-subscriber-data-from-s3.sh
+    dest: '/usr/local/bin/get-encrypted-subscriber-data-from-s3.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- name: stop ARPF shard
+  ansible.builtin.command: /usr/local/bin/stop-shard.sh
+  args:
+    chdir: '/home/{{ EC2_USER }}/'
+  become: yes
+  become_user: '{{ EC2_USER }}'
+- name: start ARPF shard
+  ansible.builtin.command: /usr/local/bin/run-shard.sh
+  args:
+    chdir: '/home/{{ EC2_USER }}/'
+  become: yes
+  become_user: '{{ EC2_USER }}'

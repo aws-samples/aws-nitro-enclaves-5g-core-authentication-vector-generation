@@ -1,0 +1,45 @@
+- ansible.builtin.file:
+    path: '{{ PATCH }}'
+    state: directory
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/nrf.yaml.patch
+    dest: '{{ PATCH }}/nrf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/scp.yaml.patch
+    dest: '{{ PATCH }}/scp.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/nssf.yaml.patch
+    dest: '{{ PATCH }}/nssf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-cnf.sh
+    dest: '{{ HOME }}/run-cnf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-nrf.sh
+    dest: '{{ HOME }}/run-nrf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/stop-nrf.sh
+    dest: '{{ HOME }}/stop-nrf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes

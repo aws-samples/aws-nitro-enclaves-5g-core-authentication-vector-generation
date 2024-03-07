@@ -1,0 +1,111 @@
+- name: Get hostname
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - shell: "ec2-metadata -g | grep HostName | cut -d ':' -f2 | awk '{print $1}'"
+      register: get_hostname
+    - debug:
+        msg: Hostname is "{{get_hostname.stdout}}"
+    - set_fact:
+        hostname: "{{ get_hostname.stdout }}"
+    # - name: debug lookup workspace endpoint
+    #   debug:
+    #     msg: Endpoint is "{{ lookup('aws_ssm', '/CoreRanCloudWanEc2Deployment/Amp/Workspace/Endpoint', region='eu-central-1' ) }}"
+    #   when: (hostname == "nrf") or (hostname == "amf")
+    # - name: lookup workspace endpoint
+    #   set_fact:
+    #     amp_endpoint_url: "{{ lookup('aws_ssm', '/CoreRanCloudWanEc2Deployment/Amp/Workspace/Endpoint', region='eu-central-1' ) }}"
+    #   when: (hostname == "upf") or (hostname == "amf")
+
+- name: Deploy cloudwatch configuration
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: cloudwatch.yaml
+      vars:
+        filename: core.json
+        scrapper: scrapper.yaml
+      when: (hostname == "upf") or (hostname == "amf")  or (hostname == "udm")  or (hostname == "arpf")
+
+- name: Deploy scripts to run open5gs nrf, scp, nssf
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: nrf.yaml
+      when: (hostname == "nrf")
+
+- name: Deploy scripts to run open5gs udm, udr, ausf
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: udm.yaml
+      when: (hostname == "udm")
+
+- name: Deploy scripts to run open5gs amf, smf, bsf, and pcf
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: amf.yaml
+      when: (hostname == "amf")
+
+- name: Deploy scripts to run open5gs user-plane
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: upf.yaml
+      when: (hostname == "upf")
+
+- name: Deploy scripts to run ueransim
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: ueransim.yaml
+      when: (hostname == "ran")
+
+- name: Deploy scripts and utilities for management host
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: management.yaml
+      when: (hostname == "management")
+
+- name: Deploy scripts and utilities for enclave/arpf host
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: enclave.yaml
+      when: (hostname == "arpf")
+
+- name: Deploy scripts and utilities for enclave/shard host
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: shard.yaml
+      when: (hostname == "shard")
+
+- name: Deploy scripts and utilities for testing host
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - variables.yaml
+  tasks:
+    - include_tasks: testing.yaml
+      when: (hostname == "testing")

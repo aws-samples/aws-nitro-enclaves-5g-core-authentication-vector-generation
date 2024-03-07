@@ -1,0 +1,51 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Enable IAM User Permissions, from CLI, replacing default",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "ROOT_PRINCIPAL_ARN"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "Management host encrypt and decrypt",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "OPERATOR_PRINCIPAL_ARN"
+            },
+            "Action": ["kms:Encrypt","kms:Decrypt"],
+            "Resource": "*"
+        },
+        {
+            "Sid": "Enclave host decrypt only (PCR condition)",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "ENCLAVE_PRINCIPAL_ARN"
+            },
+            "Action": ["kms:Decrypt"],
+            "Resource": "*",
+            "Condition": {
+                "StringEqualsIgnoreCase": {
+                    "kms:RecipientAttestation:PCR0": "ENCLAVE_PCR0_STRING"
+                }
+            }
+        },
+        {
+            "Sid": "Shard host decrypt only",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "SHARD_PRINCIPAL_ARN"
+            },
+            "Action": ["kms:Decrypt"],
+            "Resource": "*",
+            "Condition": {
+                "StringEqualsIgnoreCase": {
+                    "kms:RecipientAttestation:PCR0": "SHARD_PCR0_STRING"
+                }
+            }
+        }
+    ]
+}

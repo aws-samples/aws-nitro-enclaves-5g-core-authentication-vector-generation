@@ -1,0 +1,47 @@
+name: InstallNitroEnclavesPackages
+description: Install packages and configure system for using Nitro Enclaves
+schemaVersion: 1.0
+
+parameters:
+  - EC2-USER:
+      type: string
+      default: ec2-user
+      description: The user on the instance
+
+phases:
+  - name: build
+    steps:
+      - name: Basics
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y socat
+      - name: NitroEnclavesCliSetup
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y aws-nitro-enclaves-cli aws-nitro-enclaves-cli-devel
+            - usermod -aG ne,docker {{ EC2-USER }}
+            # Temporary downgrade of Docker to address https://github.com/aws/aws-nitro-enclaves-cli/issues/537
+            - dnf downgrade -y docker-24.0.5-1.amzn2023.0.3
+            - systemctl restart docker
+      - name: NitroEnclavesAllocatorSetup
+        action: ExecuteBash
+        inputs:
+          commands:
+            # Edit memory_mib and cpu_count in /etc/nitro_enclaves/allocator.yaml
+            - systemctl start nitro-enclaves-allocator.service
+            - systemctl enable nitro-enclaves-allocator.service
+      - name: PythonDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y python3-pip python3-wheel
+            - pip3 install cbor2
+  - name: validate
+    steps:
+      - name: CheckNitroCliVersion
+        action: ExecuteBash
+        inputs:
+          commands:
+            - nitro-cli --version

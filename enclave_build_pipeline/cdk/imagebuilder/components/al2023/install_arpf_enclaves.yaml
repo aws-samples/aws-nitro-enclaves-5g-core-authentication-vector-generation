@@ -1,0 +1,87 @@
+name: BuildInstallEifImage
+description: Build and install eif image for ARPF enclave
+schemaVersion: 1.0
+
+parameters:
+  - REGION:
+      type: string
+      default: eu-central-1
+      description: The region
+  - EC2-USER:
+      type: string
+      default: ec2-user
+      description: The user on the instance
+  - DOCKER-URI:
+      type: string
+      description: The URI to use to fetch an image to build the eif file
+  - pcr0ParameterPath:
+      type: string
+      description: The path of the parameter where to store the PCR0
+  - BuildBucketPathUri:
+      type: string
+      description: URI of the S3 bucker with artefacts
+
+phases:
+  - name: build
+    steps:
+      - name: StartDocker
+        action: ExecuteBash
+        inputs:
+          commands:
+            - aws ecr get-login-password --region {{ REGION }} | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.{{ REGION }}.amazonaws.com
+            - systemctl restart docker
+      - name: BuildEifImage
+        action: ExecuteBash
+        inputs:
+          commands:
+            - echo {{ DOCKER-URI }}
+            - docker pull {{ DOCKER-URI }}
+            - mkdir build
+            - export NITRO_CLI_ARTIFACTS=$(pwd)/build
+            - PCR0=$(nitro-cli build-enclave  --docker-uri {{ DOCKER-URI }} --output-file arpf.eif | jq -r .Measurements.PCR0)
+            - echo $PCR0
+            - mkdir -p /usr/local/share/enclaves/arpf/
+            - mv arpf.eif /usr/local/share/enclaves/arpf/
+            - aws ssm put-parameter --name {{ pcr0ParameterPath }} --value $PCR0 --overwrite
+      - name: EditNitroEnclavesAllocatorSetup
+        action: ExecuteBash
+        inputs:
+          commands:
+            - sed 's/ 512/ 4096/' -i /etc/nitro_enclaves/allocator.yaml
+            - sed 's/ 2/ 1/' -i /etc/nitro_enclaves/allocator.yaml
+      - name: Binaries
+        action: ExecuteBash
+        inputs:
+          commands:
+            - echo {{ BuildBucketPathUri }}
+            - aws s3 ls {{ BuildBucketPathUri }}
+            - aws s3 ls {{ BuildBucketPathUri }}bin/
+            - aws s3 cp {{ BuildBucketPathUri }}bin/enclave-ctl.py /usr/local/bin/enclave-ctl.py
+            - chmod +x /usr/local/bin/enclave-ctl.py
+            - aws s3 cp {{ BuildBucketPathUri }}bin/run-arpf-enclave-proxy.sh /usr/local/bin/run-arpf-enclave-proxy.sh
+            - chmod +x /usr/local/bin/run-arpf-enclave-proxy.sh
+            - aws s3 cp {{ BuildBucketPathUri }}bin/run-kms-proxy.sh /usr/local/bin/run-kms-proxy.sh
+            - chmod +x /usr/local/bin/run-kms-proxy.sh
+            - aws s3 cp {{ BuildBucketPathUri }}bin/run-arpf-enclave.sh /usr/local/bin/run-arpf-enclave.sh
+            - chmod +x /usr/local/bin/run-arpf-enclave.sh
+            - aws s3 cp {{ BuildBucketPathUri }}bin/run-debug-arpf-enclave.sh /usr/local/bin/run-debug-arpf-enclave.sh
+            - chmod +x /usr/local/bin/run-debug-arpf-enclave.sh
+            - aws s3 cp {{ BuildBucketPathUri }}bin/stop-arpf-enclave.sh /usr/local/bin/stop-arpf-enclave.sh
+            - chmod +x /usr/local/bin/stop-arpf-enclave.sh
+            - aws s3 cp {{ BuildBucketPathUri }}bin/check-arpf-enclave.sh /usr/local/bin/check-arpf-enclave.sh
+            - chmod +x /usr/local/bin/check-arpf-enclave.sh
+      - name: CleanUp
+        action: ExecuteBash
+        inputs:
+          commands:
+            - rm -rf build
+            - docker rmi {{ DOCKER-URI }}
+            - docker logout $(aws sts get-caller-identity --query "Account" --output text).dkr.ecr.{{ REGION }}.amazonaws.com
+  - name: validate
+    steps:
+      - name: CheckEifImage
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls -al /usr/local/share/enclaves/arpf/
+            - ls -al /usr/local/bin/

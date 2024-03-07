@@ -1,0 +1,66 @@
+- ansible.builtin.file:
+    path: '{{ PATCH }}'
+    state: directory
+# - ansible.builtin.copy:
+#     src: adot/etc/amf.yaml
+#     dest: '{{ HOME }}/adot-amf.yaml'
+#     owner: '{{ EC2_USER }}'
+#     group: '{{ EC2_USER }}'
+#     mode: u=rw,g=r,o=r
+#     backup: yes
+# - name: Replace AMP endpoint
+#   ansible.builtin.replace:
+#     path: '{{ HOME }}/adot-amf.yaml'
+#     regexp: 'AMP_ENDPOINT_URL'
+#     replace: '{{ amp_endpoint_url }}'
+# - name: Restart adot collector
+#   ansible.builtin.shell: '{{ ADOT_CMD }} -c {{ HOME }}/adot-amf.yaml -a start'
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/bsf.yaml.patch
+    dest: '{{ PATCH }}/bsf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/pcf.yaml.patch
+    dest: '{{ PATCH }}/pcf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/smf.yaml.patch
+    dest: '{{ PATCH }}/smf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/amf.yaml.patch
+    dest: '{{ PATCH }}/amf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-cnf.sh
+    dest: '{{ HOME }}/run-cnf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-amf.sh
+    dest: '{{ HOME }}/run-amf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/stop-amf.sh
+    dest: '{{ HOME }}/stop-amf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes

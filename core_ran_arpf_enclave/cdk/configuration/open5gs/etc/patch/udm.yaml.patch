@@ -1,0 +1,10 @@
+320,321c320,321
+<       - addr: REPLACE_ENI_IP
+<         port: 8778
+---
+>       - addr: 127.0.0.12
+>         port: 7777
+389c389
+<       - addr: scp.local
+---
+>       - addr: 127.0.1.10

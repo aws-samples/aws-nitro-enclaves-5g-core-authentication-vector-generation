@@ -1,0 +1,10 @@
+256,257c256,257
+<       - addr: REPLACE_ENI_IP
+<         port: 8779
+---
+>       - addr: 127.0.0.11
+>         port: 7777
+325c325
+<       - addr: scp.local
+---
+>       - addr: 127.0.1.10

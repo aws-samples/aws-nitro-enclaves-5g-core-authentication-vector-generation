@@ -1,0 +1,55 @@
+From ccaf4988df6c3e79adad69d2ca3c92a0e5d69f29 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 13:06:04 +0000
+Subject: [PATCH 12/17] Additional check
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 24 ++++++++++++++----------
+ 1 file changed, 14 insertions(+), 10 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 20e1b8324..c57e643fc 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -70,23 +70,27 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+     char buf[1024];
+     //char response[1024];
+     size_t msg_len;
++    size_t last_msg_len = 0;
+     while ((msg_len = recv(sock_fd, &buf, 1024, 0)) > 0) {
+       ogs_info("Received %lu bytes:\n%.*s\n", msg_len, (int)msg_len,buf);
++      last_msg_len = msg_len;
+     }
+     close(sock_fd);
+     // Parse the result
+     // Typicaly result
+     // {"Status": "success", "Response": {"rand": "5c4b9b49ba2b367ad72e7eefd3f292c9", "xres_star": "d4fb1a28f9c59f7bd7f804f4a2865766", "autn": "a0062653c2fe800073996304ad725f16", "kausf": "ff34ef16d6e9eb1b8f7fec1b0a3ae8a4856ce188d42cd496579992061f215ce0"}}
+-    char result[20];
+-    sscanf( buf, "{\"Status\": \"%7c\"", (char *)&result );
+-    if (strcmp(result,"success")==0) {
+-      ogs_warn("Received \"success\" from Enclave. Parse further");
+-      sscanf(buf, "{\"Status\": \"success\", \"Response\": {\"rand\": \"%32c\", \"xres_star\": \"%32c\", \"autn\": \"%32c\", \"kausf\": \"%64c\"}}",rand_string,xres_star_string,autn_string,kausf_string);
+-      ogs_info("Enclave xrs: %.32s",xres_star_string);
+-      ogs_info("Enclave autn: %.32s",autn_string);
+-      ogs_info("Enclave kausf: %.64s",kausf_string);
+-    } else {
+-       return OGS_ERROR;
++    if (last_msg_len == 249) {
++      char result[20];
++      sscanf( buf, "{\"Status\": \"%7c\"", (char *)&result );
++      if (strcmp(result,"success")==0) {
++        ogs_warn("Received \"success\" from Enclave. Parse further");
++        sscanf(buf, "{\"Status\": \"success\", \"Response\": {\"rand\": \"%32c\", \"xres_star\": \"%32c\", \"autn\": \"%32c\", \"kausf\": \"%64c\"}}",rand_string,xres_star_string,autn_string,kausf_string);
++        ogs_info("Enclave xrs: %.32s",xres_star_string);
++        ogs_info("Enclave autn: %.32s",autn_string);
++        ogs_info("Enclave kausf: %.64s",kausf_string);
++      } else {
++         return OGS_ERROR;
++      }
+     }
+     return OGS_OK;
+ }
+-- 
+2.40.1
+

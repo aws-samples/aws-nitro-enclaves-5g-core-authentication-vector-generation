@@ -1,0 +1,176 @@
+From e9f9b5947297ae8142df8fc7c1b6051c51ff2c8d Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Sun, 23 Oct 2022 19:25:22 +0000
+Subject: [PATCH 06/17] Baseline for Enclave generate
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 77 ++++++++++++++++++++----------------------
+ src/udm/nudr-handler.h |  5 ++-
+ 2 files changed, 41 insertions(+), 41 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 8229cda45..e5be65a7d 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -21,13 +21,32 @@
+ #include <linux/vm_sockets.h>
+ #include "unistd.h"
+ 
+-bool enclave_milenage_generate()
++bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
++                                  uint8_t* sqn,
++                                  char* serving_network_name,
++                                  uint8_t* rand,
++                                  uint8_t* xres, uint8_t* autn, uint8_t* kausf)
+ {
+     int rv = 0;
+     struct sockaddr_vm vm_addr;
+     int sock_fd = 0;
+ 
++    char amf_string[OGS_KEYSTRLEN(OGS_AMF_LEN)];
++    char sqn_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
++    char rand_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++
++    ogs_hex_to_ascii(amf, sizeof(amf_string),amf_string, sizeof(amf_string));
++    ogs_hex_to_ascii(sqn, sizeof(sqn_string),sqn_string, sizeof(sqn_string));
++    ogs_hex_to_ascii(rand, sizeof(rand_string),rand_string, sizeof(rand_string));
++
+     ogs_info("Enclave offloading");
++    ogs_info("json inputs for %s", supi);
++    ogs_info("amf: %s",amf_string);
++    ogs_info("sqn: %s",sqn_string);
++    ogs_info("snn: %s",serving_network_name);
++    ogs_info("rand: %s",rand_string);
++    // Alternative
++    ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",sqn[0],sqn[1],sqn[2],sqn[3],sqn[4],sqn[5]);
+ 
+     sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+     memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+@@ -94,12 +113,11 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     uint8_t kausf[OGS_SHA256_DIGEST_SIZE];
+ 
+     char rand_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
+-    char sqn_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
+     char autn_string[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
+-    char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)];
+-    char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)];
++    char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
++    char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
+ 
+     OpenAPI_authentication_subscription_t *AuthenticationSubscription = NULL;
+     OpenAPI_authentication_info_result_t AuthenticationInfoResult;
+@@ -217,11 +235,6 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                 AuthenticationSubscription->sequence_number->sqn,
+                 strlen(AuthenticationSubscription->sequence_number->sqn),
+                 udm_ue->sqn, sizeof(udm_ue->sqn));
+-	    ogs_info("opc,k,amf,sqn: %s, %s, %s, %s",
+-			    AuthenticationSubscription->enc_opc_key,
+-                            AuthenticationSubscription->enc_permanent_key,
+-			    AuthenticationSubscription->authentication_management_field,
+-			    AuthenticationSubscription->sequence_number->sqn);
+ 
+         CASE(OGS_SBI_HTTP_METHOD_PATCH)
+             if (recvmsg->res_status != OGS_SBI_HTTP_STATUS_OK &&
+@@ -245,14 +258,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             AuthenticationInfoResult.auth_type = udm_ue->auth_type;
+ 	    // Debug
+ 	    ogs_info("Pre milenage generate");
+-	    ogs_info("OGS_KEY_LEN in bytes: %d (%d bits)",OGS_KEY_LEN,OGS_KEY_LEN*8);
+-	    ogs_info("Generate CK, IK and others: UE supi %s, suci %s",udm_ue->supi,udm_ue->suci);
+-	    ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
+-           ogs_hex_to_ascii(udm_ue->sqn, sizeof(udm_ue->sqn),
+-		             sqn_string, sizeof(sqn_string));
+-	    ogs_info("sqn: %s",sqn_string);
+-	    ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
+-			                                 rand_string, sizeof(rand_string));
++
+             ogs_random(udm_ue->rand, OGS_RAND_LEN);
+ #if 0
+             OGS_HEX(tmp[step], strlen(tmp[step]), udm_ue->rand);
+@@ -261,18 +267,16 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             else step = 0;
+ #endif
+ #endif
++            // rmz: insert here parallel concep
++	    enclave_generate_auth_vector(udm_ue->supi, udm_ue->amf, udm_ue->sqn,
++                                         udm_ue->serving_network_name, udm_ue->rand,
++                                         xres, autn, kausf);
+ 
+             milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+-
+-            // rmz: insert here parallel concep
+-	    enclave_milenage_generate();
+-
+             ogs_assert(udm_ue->serving_network_name);
+ 
+-	    ogs_info("Calling KDF for kausf");
+-	    ogs_info("Serving_network_name: %s",udm_ue->serving_network_name);
+             /* TS33.501 Annex A.2 : Kausf derviation function */
+             ogs_kdf_kausf(
+                     ck, ik,
+@@ -287,23 +291,8 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 
+ 	    // Debug: hex_to_ascii called here to print autn and more
+             ogs_info("Post milenage generate");
+-            ogs_info("rand %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:",udm_ue->rand[0],udm_ue->rand[1],udm_ue->rand[2],udm_ue->rand[3],udm_ue->rand[4],udm_ue->rand[5],udm_ue->rand[6],udm_ue->rand[7],udm_ue->rand[8],udm_ue->rand[9],udm_ue->rand[10],udm_ue->rand[11],udm_ue->rand[12],udm_ue->rand[13],udm_ue->rand[14],udm_ue->rand[15]);
+-	    ogs_info("rand: %s",rand_string);
+ 
+-	    ogs_hex_to_ascii(autn, sizeof(autn),
+-		             autn_string, sizeof(autn_string));
+-	    ogs_info("autn: %s",autn_string);
+-            ogs_hex_to_ascii(ck, sizeof(ck),
+-		             ck_string, sizeof(ck_string));
+-	    ogs_info("ck: %s",ck_string);
+-            ogs_hex_to_ascii(ik, sizeof(ik),
+-		             ik_string, sizeof(ik_string));
+-	    ogs_info("ik: %s",ik_string);
+-            ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
+-
+-
+-
+-	    ogs_info("Preparing AV: rand, xres_start, authn, kausf");
++	    ogs_info("Preparing AV: rand, xres_star, autn, kausf");
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+@@ -321,7 +310,15 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             AuthenticationVector.kausf = kausf_string;
+ 
+ 	    //ogs_info("kausf hex: %s", kausf);
+-            ogs_info("kausf string: %s", kausf_string);
++            ogs_hex_to_ascii(ck, sizeof(ck),
++	             ck_string, sizeof(ck_string));
++            ogs_hex_to_ascii(ik, sizeof(ik),
++		             ik_string, sizeof(ik_string));
++	    ogs_info("ik: %s",ik_string);
++	    ogs_info("ck: %s",ck_string);
++            ogs_info("autn: %s",autn_string);
++	    ogs_info("xres_star: %s",xres_star_string);
++            ogs_info("kausf: %s", kausf_string);
+ 
+             AuthenticationInfoResult.authentication_vector =
+                 &AuthenticationVector;
+diff --git a/src/udm/nudr-handler.h b/src/udm/nudr-handler.h
+index 56c20e804..cb560b904 100644
+--- a/src/udm/nudr-handler.h
++++ b/src/udm/nudr-handler.h
+@@ -33,7 +33,10 @@ bool udm_nudr_dr_handle_subscription_context(
+ bool udm_nudr_dr_handle_subscription_provisioned(
+     udm_ue_t *udm_ue, ogs_sbi_stream_t *stream, ogs_sbi_message_t *recvmsg);
+ 
+-bool enclave_milenage_generate(void);
++bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
++                                  uint8_t* sqn, char* serving_network_name,
++                                  uint8_t* rand,
++                                  uint8_t* xres, uint8_t* autn, uint8_t* kausf);
+ 
+ #ifdef __cplusplus
+ }
+-- 
+2.40.1
+

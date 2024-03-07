@@ -1,0 +1,6 @@
+EC2_USER: ec2-user
+HOME: '/home/{{ EC2_USER }}'
+PATCH: '/usr/local/etc/open5gs/patch'
+CLOUDWATCH_CONFIG: '/usr/local/etc/cloudwatch'
+CLOUDWATCH_CMD: 'sudo amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s'
+ADOT_CMD: 'sudo /opt/aws/aws-otel-collector/bin/aws-otel-collector-ctl'

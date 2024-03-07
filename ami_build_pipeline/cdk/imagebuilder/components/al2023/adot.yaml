@@ -1,0 +1,28 @@
+name: InstallAdotPackages
+description: Install Adot packages
+schemaVersion: 1.0
+
+parameters:
+  - EC2-USER:
+      type: string
+      default: ec2-user
+      description: The user on the instance
+
+phases:
+  - name: build
+    steps:
+      - name: AdotInstall
+        action: ExecuteBash
+        inputs:
+          commands:
+            # See https://github.com/aws-observability/aws-otel-collector/releases
+            - if [ `uname -p` = 'aarch64' ]; then ARCH=arm64; else ARCH=amd64; fi
+            - curl -s https://aws-otel-collector.s3.amazonaws.com/amazon_linux/${ARCH}/v0.28.0/aws-otel-collector.rpm -o aws-otel-collector.rpm
+            - rpm -Uvh  ./aws-otel-collector.rpm
+  - name: validate
+    steps:
+      - name: CheckAdotDirectory
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls /opt/aws/aws-otel-collector/

@@ -1,0 +1,18 @@
+602,603c602,603
+<       - addr: REPLACE_ENI_IP
+<         port: 7778
+---
+>       - addr: 127.0.0.4
+>         port: 7777
+605c605
+<       - addr: REPLACE_ENI_IP
+---
+>       - addr: 127.0.0.4
+695c695
+<       - addr: scp.local
+---
+>       - addr: 127.0.1.10
+811c811
+<       - addr: upf.local
+---
+>       - addr: 127.0.0.7

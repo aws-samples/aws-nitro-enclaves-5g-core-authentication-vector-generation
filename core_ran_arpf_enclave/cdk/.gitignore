@@ -1,0 +1,12 @@
+configuration/kms/key_policy.json
+configuration/kms/key_policy_for_management_host.json
+configuration/kms/key_policy_for_shards.json
+
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out

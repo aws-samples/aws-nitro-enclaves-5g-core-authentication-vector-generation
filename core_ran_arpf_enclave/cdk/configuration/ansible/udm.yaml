@@ -1,0 +1,66 @@
+- ansible.builtin.file:
+    path: '{{ PATCH }}'
+    state: directory
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/udr.yaml.patch
+    dest: '{{ PATCH }}/udr.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/udm.yaml.patch
+    dest: '{{ PATCH }}/udm.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/etc/patch/ausf.yaml.patch
+    dest: '{{ PATCH }}/ausf.yaml.patch'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rw,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/open5gs-dbctl-0.11.0
+    dest: '{{ HOME }}/open5gs-dbctl-0.11.0'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-cnf.sh
+    dest: '{{ HOME }}/run-cnf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-udm.sh
+    dest: '{{ HOME }}/run-udm.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/run-udm-enclave.sh
+    dest: '{{ HOME }}/run-udm-enclave.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: open5gs/bin/stop-udm.sh
+    dest: '{{ HOME }}/stop-udm.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: shard/bin/query_shards.py
+    dest: '/usr/local/bin/query_shards.py'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes

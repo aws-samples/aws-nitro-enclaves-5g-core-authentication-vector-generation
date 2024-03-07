@@ -1,0 +1,89 @@
+- ansible.builtin.copy:
+    src: enclave/bin/test-key-encryption.sh
+    dest: '/usr/local/bin/test-key-encryption.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: enclave/bin/test-key-encryption-via-s3.sh
+    dest: '/usr/local/bin/test-key-encryption-via-s3.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: enclave/bin/test-key-decryption-via-s3.sh
+    dest: '/usr/local/bin/test-key-decryption-via-s3.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: enclave/bin/test-key-decryption-via-s3.sh
+    dest: '/usr/local/bin/test-key-decryption-via-s3.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: arpf/bin/run-arpf.sh
+    dest: '/usr/local/bin/run-arpf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: arpf/bin/stop-arpf.sh
+    dest: '/usr/local/bin/stop-arpf.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: arpf/bin/expose_enclave_status.py
+    dest: '/usr/local/bin/expose_enclave_status.py'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/encryptor.py
+    dest: '/usr/local/bin/encryptor.py'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/decrypt_base64_subscriber_data.sh
+    dest: '/usr/local/bin/decrypt_base64_subscriber_data.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/encrypt_subscriber_data.sh
+    dest: '/usr/local/bin/encrypt_subscriber_data.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- ansible.builtin.copy:
+    src: management/bin/get-encrypted-subscriber-data-from-s3.sh
+    dest: '/usr/local/bin/get-encrypted-subscriber-data-from-s3.sh'
+    owner: '{{ EC2_USER }}'
+    group: '{{ EC2_USER }}'
+    mode: u=rwx,g=r,o=r
+    backup: yes
+- name: stop ARPF enclave
+  ansible.builtin.command: /usr/local/bin/stop-arpf.sh
+  args:
+    chdir: '/home/{{ EC2_USER }}/'
+  become: yes
+  become_user: '{{ EC2_USER }}'
+- name: start ARPF enclave
+  ansible.builtin.command: /usr/local/bin/run-arpf.sh
+  args:
+    chdir: '/home/{{ EC2_USER }}/'
+  become: yes
+  become_user: '{{ EC2_USER }}'

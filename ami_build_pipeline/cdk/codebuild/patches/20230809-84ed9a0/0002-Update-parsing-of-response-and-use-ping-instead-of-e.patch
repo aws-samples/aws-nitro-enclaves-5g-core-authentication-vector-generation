@@ -1,0 +1,55 @@
+From 74185554f37d8e6b465bba8e343be1b50054f3c2 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Fri, 21 Oct 2022 14:31:47 +0000
+Subject: [PATCH 02/16] Update parsing of response and use ping instead of echo
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/app.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/src/udm/app.c b/src/udm/app.c
+index 1a04e87ee..de1a49ade 100644
+--- a/src/udm/app.c
++++ b/src/udm/app.c
+@@ -19,6 +19,7 @@
+ 
+ #include "ogs-app.h"
+ #include <linux/vm_sockets.h>
++#include "unistd.h"
+ 
+ int app_initialize(const char *const argv[])
+ {
+@@ -54,20 +55,24 @@ int check_enclave(void)
+     rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
+     if (rv < 0) {
+       ogs_error("Error during enclave connection establishment");
++      return OGS_ERROR;
+     }
+-    const char* msg = "{ \"command\": \"echo\", \"argument\": \"udm\" }";
++    const char* msg = "{ \"command\": \"ping\", \"source\": \"udm\" }";
+     rv = send(sock_fd, msg, strlen(msg), 0);
+     if (rv < 0) {
+       ogs_error("Error during enclave command transmission");
++      return OGS_ERROR;
+     }
+     char buf[1024];
+-    char response[1024];
++    //char response[1024];
+     size_t msg_len;
+     while ((msg_len = recv(sock_fd, &buf, 1024, 0)) > 0) {
+-      strncpy(response,buf,msg_len);
+-      response[msg_len] = '\0';
+-      ogs_info("Received %lu bytes:\n%s\n", msg_len, response);
++      //strncpy(response,buf,msg_len);
++      //response[msg_len] = '\0';
++      //ogs_info("Received %lu bytes:\n%s\n", msg_len, response);
++      ogs_info("Received %lu bytes:\n%.*s\n", msg_len, (int)msg_len,buf);
+     }
++    close(sock_fd);
+ 
+     return OGS_OK;
+ }
+-- 
+2.41.0
+

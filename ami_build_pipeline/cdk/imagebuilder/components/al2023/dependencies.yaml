@@ -1,0 +1,34 @@
+name: InstallPackages
+description: Install packages needed for running open5gs, srsRAN, UERANSIM, and MongoDB
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: GenericDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y git meson cmake ninja-build libmicrohttpd-devel python3 gcc gcc-c++ flex bison lksctp-tools-devel libidn-devel gnutls-devel libgcrypt-devel openssl-devel cyrus-sasl-devel libyaml-devel libcurl-devel libnghttp2-devel libtalloc-devel wget xz xz-devel python3-devel
+            - dnf install -y libcurl openssl xz-libs --allowerasing
+      - name: Open5gsDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y patch socat
+      - name: SrsRANDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y cmake fftw-devel lksctp-tools-devel libconfig-devel boost-devel gtest-devel gtest yaml-cpp-devel yaml-cpp libunwind-devel
+      - name: UERANSIMDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y cmake gcc gcc-c++ iproute lksctp-tools-devel lksctp-tools
+      - name: PythonDependencies
+        action: ExecuteBash
+        inputs:
+          commands:
+            - dnf install -y python3-pip python3-wheel python3-requests
+            - pip3 install git-remote-codecommit boto3 pycryptodome cryptography

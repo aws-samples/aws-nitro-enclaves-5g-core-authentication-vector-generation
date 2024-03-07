@@ -1,0 +1,185 @@
+From 991d6f1f0cf397e11e6925a1b94c00ad67867744 Mon Sep 17 00:00:00 2001
+From: EC2 Default User <ec2-user@ip-10-11-9-45.eu-central-1.compute.internal>
+Date: Thu, 10 Aug 2023 11:46:54 +0000
+Subject: [PATCH 17/17] Use TCP socket calling arpf.local instead of VSOCK
+
+Signed-off-by: EC2 Default User <ec2-user@ip-10-11-9-45.eu-central-1.compute.internal>
+---
+ src/udm/app.c          | 34 +++++++++++++++++++++++++++-------
+ src/udm/nudm-handler.c | 33 ++++++++++++++++++++++++++-------
+ src/udm/nudr-handler.c | 33 ++++++++++++++++++++++++++-------
+ 3 files changed, 79 insertions(+), 21 deletions(-)
+
+diff --git a/src/udm/app.c b/src/udm/app.c
+index 98a33a489..0015272d8 100644
+--- a/src/udm/app.c
++++ b/src/udm/app.c
+@@ -20,6 +20,7 @@
+ #include "ogs-app.h"
+ #include <linux/vm_sockets.h>
+ #include "unistd.h"
++#include <netdb.h>
+ 
+ int app_initialize(const char *const argv[])
+ {
+@@ -42,17 +43,36 @@ int app_initialize(const char *const argv[])
+ int check_enclave(void)
+ {
+     int rv;
+-    struct sockaddr_vm vm_addr;
++    //struct sockaddr_vm vm_addr; // VSOCK
++    struct sockaddr_in servaddr;
++    struct hostent *host;
+     int sock_fd = 0;
+ 
+     ogs_info("Check enclave availability");
+ 
+-    sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+-    memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+-    vm_addr.svm_family = AF_VSOCK;
+-    vm_addr.svm_port = 8888; //strtol("8888", NULL, 10);
+-    vm_addr.svm_cid = 12; //strtol("12", NULL, 10);
+-    rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++    // VSOCK socket option, if the Nitro Enclave is running diretly on the same host
++    //sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
++    //memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
++    //vm_addr.svm_family = AF_VSOCK;
++    //vm_addr.svm_port = 8888; //strtol("8888", NULL, 10);
++    //vm_addr.svm_cid = 12; //strtol("12", NULL, 10);
++    //rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++
++    // TCP socket option, if the Nitro Enclave is remote
++    host = gethostbyname("arpf.local");
++    if (host == (struct hostent *) 0) {
++      ogs_error("Gethostbyname for arpf.local failed\n");
++      return OGS_ERROR;
++    } else {
++      ogs_info("%s",inet_ntoa (*(struct in_addr*)host->h_addr));
++    }
++    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
++    memset(&servaddr, 0, sizeof(servaddr));
++    servaddr.sin_family = AF_INET;
++    servaddr.sin_addr.s_addr = inet_addr(inet_ntoa (*(struct in_addr*)host->h_addr));
++    servaddr.sin_port = htons(8012);
++    rv = connect(sock_fd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
++
+     if (rv < 0) {
+       ogs_error("Error during enclave connection establishment");
+       return OGS_ERROR;
+diff --git a/src/udm/nudm-handler.c b/src/udm/nudm-handler.c
+index f6ee98731..38f0bda0d 100644
+--- a/src/udm/nudm-handler.c
++++ b/src/udm/nudm-handler.c
+@@ -22,12 +22,15 @@
+ #include "nudm-handler.h"
+ #include <linux/vm_sockets.h>
+ #include "unistd.h"
++#include <netdb.h>
+ 
+ bool enclave_resync(char* supi,uint8_t* rand,
+                     uint8_t* auts,uint8_t*sqn_ms,uint8_t* mac_s)
+ {
+     int rv = 0;
+-    struct sockaddr_vm vm_addr;
++    //struct sockaddr_vm vm_addr; // VSOCK
++    struct sockaddr_in servaddr;
++    struct hostent *host;
+     int sock_fd = 0;
+ 
+     char auts_input_string[OGS_KEYSTRLEN(OGS_AUTS_LEN)];
+@@ -43,12 +46,28 @@ bool enclave_resync(char* supi,uint8_t* rand,
+     char msg[256];
+     sprintf(msg,"{ \"command\": \"resync\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"0000\", \"auts\": \"%s\", \"rand\": \"%s\" }",supi,auts_input_string,rand_input_string);
+ 
+-    sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+-    memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+-    vm_addr.svm_family = AF_VSOCK;
+-    vm_addr.svm_port = 8888;
+-    vm_addr.svm_cid = 12;
+-    rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++    // VSOCK option
++    //sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
++    //memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
++    //vm_addr.svm_family = AF_VSOCK;
++    //vm_addr.svm_port = 8888;
++    //vm_addr.svm_cid = 12;
++    //rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++
++    // TCP socket option, if the Nitro Enclave is remote
++    host = gethostbyname("arpf.local");
++    if (host == (struct hostent *) 0) {
++      ogs_error("Gethostbyname for arpf.local failed\n");
++      return OGS_ERROR;
++    } else {
++      ogs_info("%s",inet_ntoa (*(struct in_addr*)host->h_addr));
++    }
++    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
++    memset(&servaddr, 0, sizeof(servaddr));
++    servaddr.sin_family = AF_INET;
++    servaddr.sin_addr.s_addr = inet_addr(inet_ntoa (*(struct in_addr*)host->h_addr));
++    servaddr.sin_port = htons(8012);
++    rv = connect(sock_fd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+     if (rv < 0) {
+       ogs_error("Error during enclave connection establishment");
+       return OGS_ERROR;
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 1ff8750d9..b5ec7b77a 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -20,6 +20,7 @@
+ #include "nudr-handler.h"
+ #include <linux/vm_sockets.h>
+ #include "unistd.h"
++#include <netdb.h>
+ 
+ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+                                   uint8_t* sqn,
+@@ -28,7 +29,9 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+                                   char* rand_string, char* xres_star_string, char* autn_string, char* kausf_string)
+ {
+     int rv = 0;
+-    struct sockaddr_vm vm_addr;
++    //struct sockaddr_vm vm_addr; // VSOCK
++    struct sockaddr_in servaddr;
++    struct hostent *host;
+     int sock_fd = 0;
+ 
+     char amf_input_string[OGS_KEYSTRLEN(OGS_AMF_LEN)];
+@@ -52,12 +55,28 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+     char msg[256];
+     sprintf(msg,"{ \"command\": \"get-authentication-vector\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"%s\", \"sqn\": \"%s\", \"snn\": \"%s\", \"rand\": \"%s\" }",supi,amf_input_string,sqn_input_string,serving_network_name,rand_input_string);
+ 
+-    sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+-    memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+-    vm_addr.svm_family = AF_VSOCK;
+-    vm_addr.svm_port = 8888;
+-    vm_addr.svm_cid = 12;
+-    rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++    // VSOCK option
++    //sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
++    //memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
++    //vm_addr.svm_family = AF_VSOCK;
++    //vm_addr.svm_port = 8888;
++    //vm_addr.svm_cid = 12;
++    //rv = connect(sock_fd,(const struct sockaddr *)&vm_addr, sizeof(struct sockaddr_vm));
++
++    // TCP socket option, if the Nitro Enclave is remote
++    host = gethostbyname("arpf.local");
++    if (host == (struct hostent *) 0) {
++      ogs_error("Gethostbyname for arpf.local failed\n");
++      return OGS_ERROR;
++    } else {
++      ogs_info("%s",inet_ntoa (*(struct in_addr*)host->h_addr));
++    }
++    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
++    memset(&servaddr, 0, sizeof(servaddr));
++    servaddr.sin_family = AF_INET;
++    servaddr.sin_addr.s_addr = inet_addr(inet_ntoa (*(struct in_addr*)host->h_addr));
++    servaddr.sin_port = htons(8012);
++    rv = connect(sock_fd, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+     if (rv < 0) {
+       ogs_error("Error during enclave connection establishment");
+       return OGS_ERROR;
+-- 
+2.40.1
+

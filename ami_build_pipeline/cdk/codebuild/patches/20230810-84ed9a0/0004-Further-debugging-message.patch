@@ -1,0 +1,62 @@
+From eb17a964593c8d46192bd7d993dbee249ea5448b Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Fri, 21 Oct 2022 16:30:37 +0000
+Subject: [PATCH 04/17] Further debugging message
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index f94637d3b..d2e521658 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -94,6 +94,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     uint8_t kausf[OGS_SHA256_DIGEST_SIZE];
+ 
+     char rand_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++    char sqn_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
+     char autn_string[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
+@@ -253,14 +254,25 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ #endif
+ 
+ 	    // Debug
++	    ogs_info("Pre milenage generate");
+ 	    ogs_info("OGS_KEY_LEN in bytes: %d (%d bits)",OGS_KEY_LEN,OGS_KEY_LEN*8);
+ 	    ogs_info("Generate CK, IK and others: UE supi %s, suci %s",udm_ue->supi,udm_ue->suci);
++	    ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
++            ogs_info("rand %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:",udm_ue->rand[0],udm_ue->rand[1],udm_ue->rand[2],udm_ue->rand[3],udm_ue->rand[4],udm_ue->rand[5],udm_ue->rand[6],udm_ue->rand[7],udm_ue->rand[8],udm_ue->rand[9],udm_ue->rand[10],udm_ue->rand[11],udm_ue->rand[12],udm_ue->rand[13],udm_ue->rand[14],udm_ue->rand[15]);
++            ogs_hex_to_ascii(udm_ue->sqn, sizeof(udm_ue->sqn),
++		             sqn_string, sizeof(sqn_string));
++	    ogs_info("sqn: %s",sqn_string);
++	    ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
++			                                 rand_string, sizeof(rand_string));
++	    ogs_info("rand: %s",rand_string);
++
+ 
+ 	    milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+-	    // hex_to_ascii called here to print autn
+-            ogs_hex_to_ascii(autn, sizeof(autn),
++	    // Debug: hex_to_ascii called here to print autn and more
++            ogs_info("Post milenage generate");
++	    ogs_hex_to_ascii(autn, sizeof(autn),
+ 		             autn_string, sizeof(autn_string));
+ 	    ogs_info("autn: %s",autn_string);
+             ogs_hex_to_ascii(ck, sizeof(ck),
+@@ -269,6 +281,8 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             ogs_hex_to_ascii(ik, sizeof(ik),
+ 		             ik_string, sizeof(ik_string));
+ 	    ogs_info("ik: %s",ik_string);
++            ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
++
+ 
+ 
+             // rmz: insert here parallel concep
+-- 
+2.40.1
+

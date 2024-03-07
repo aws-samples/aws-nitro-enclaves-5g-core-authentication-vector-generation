@@ -1,0 +1,48 @@
+From e188e407301377fd2ce101e864cff46bb63f3152 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 16:08:48 +0000
+Subject: [PATCH 14/17] Stable code: need to carefully clean-up
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 5b49d22c4..5dc59006c 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -127,9 +127,9 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     uint8_t autn[OGS_AUTN_LEN];
+     uint8_t ik[OGS_KEY_LEN];
+     uint8_t ck[OGS_KEY_LEN];
+-    // uint8_t ak[OGS_AK_LEN]; // Not needed with offloading to Enclave
+-    //uint8_t xres[OGS_MAX_RES_LEN];
+-    //size_t xres_len = 8;
++    uint8_t ak[OGS_AK_LEN]; // Not needed with offloading to Enclave
++    uint8_t xres[OGS_MAX_RES_LEN];
++    size_t xres_len = 8;
+     uint8_t xres_star[OGS_MAX_RES_LEN];
+     uint8_t kausf[OGS_SHA256_DIGEST_SIZE];
+ 
+@@ -295,7 +295,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 	    enclave_generate_auth_vector(udm_ue->supi, udm_ue->amf, udm_ue->sqn,
+                                          udm_ue->serving_network_name, udm_ue->rand,
+                                          rand_string_enclave,xres_star_string_enclave, autn_string_enclave, kausf_string_enclave);
+-            /* Replaced by Enclave
++            // Replaced by Enclave
+             milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+@@ -312,7 +312,7 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     ck, ik,
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+-            */
++            // End of replaced by enclave
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+-- 
+2.40.1
+

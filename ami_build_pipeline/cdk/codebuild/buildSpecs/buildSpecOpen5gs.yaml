@@ -1,0 +1,47 @@
+version: 0.2
+
+env:
+  shell: bash
+  variables:
+    APPLICATION_NAME: "CoreRanAmiPipeline"
+    BUCKET_PATH: "S3/CodeBuildCoreRanBucketName"
+
+phases:
+  install:
+    commands:
+      - dnf update -y
+      - dnf install -y aws-cli sudo
+      - BUCKET_NAME=$(aws ssm get-parameter --name "/${APPLICATION_NAME}/${BUCKET_PATH}" --query "Parameter.Value" --output text)
+      - echo $BUCKET_NAME
+      - mkdir -p ~/src/buildScripts
+      - aws s3 cp s3://${BUCKET_NAME}/buildScripts/al2023/install_dependencies_al2023.sh ~/src/buildScripts
+      - sh ~/src/buildScripts/install_dependencies_al2023.sh
+      #- dnf install -y 'dnf-command(check-release-update)'
+      #- dnf upgrade -y --releasever=2022.0.20221207
+  pre_build:
+    commands:
+      - ls $CODEBUILD_SRC_DIR
+      - ls ~/src
+      - aws s3 cp s3://${BUCKET_NAME}/buildScripts/al2023/install_mongoc_driver.sh ~/src/buildScripts
+      - aws s3 cp s3://${BUCKET_NAME}/buildScripts/al2023/install_open5gs.sh ~/src/buildScripts
+      - aws s3 cp s3://${BUCKET_NAME}/buildScripts/al2023/update_open5gs_certificates.sh ~/src/buildScripts
+  build:
+    commands:
+      - sh ~/src/buildScripts/install_mongoc_driver.sh
+      - sh ~/src/buildScripts/install_open5gs.sh
+      #- sh ~/src/build/update_open5gs_certificates.sh
+  post_build:
+    commands:
+      - ls -alR /usr/local/bin
+      - ls -alR /usr/local/etc
+      - ls -alR /usr/local/lib64
+
+artifacts:
+  files:
+    - bin/open5gs*
+    - etc/freeDiameter/**/*
+    - etc/open5gs/**/*
+    - include/**/*
+    - lib64/**/*
+  base-directory: /usr/local/
+  enable-symlinks: yes

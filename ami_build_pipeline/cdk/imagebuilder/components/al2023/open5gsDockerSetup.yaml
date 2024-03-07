@@ -1,0 +1,36 @@
+name: GetOpen5gsBinariesFiles
+description: Get files needed to build the Open5gs binaries Docker image
+schemaVersion: 1.0
+
+parameters:
+  - BuildBucketPathUri:
+      type: string
+      description: S3 bucket path URI to fetch the files
+  - DownloadDirectory:
+      type: string
+      description: Directory used for building the container
+  - Region:
+      type: string
+      default: 'eu-central-1'
+      description: The current region
+
+phases:
+  - name: build
+    steps:
+      - name: GetScript
+        action: ExecuteBash
+        inputs:
+          commands:
+            - echo {{ BuildBucketPathUri }}
+            - dnf install -y awscli jq unzip shadow-utils
+            - aws s3 ls {{ BuildBucketPathUri }}
+            - aws s3 cp {{ BuildBucketPathUri }}run_nf.sh {{ DownloadDirectory }}
+
+  - name: validate
+    steps:
+      - name: CheckScriptLocation
+        action: ExecuteBash
+        inputs:
+          commands:
+            - ls {{ DownloadDirectory }}
+            - ls {{ DownloadDirectory }}run_nf.sh

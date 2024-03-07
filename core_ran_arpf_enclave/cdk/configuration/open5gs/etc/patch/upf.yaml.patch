@@ -1,0 +1,8 @@
+199c199
+<       - addr: REPLACE_ENI_IP
+---
+>       - addr: 127.0.0.7
+201c201
+<       - addr: REPLACE_ENI_IP
+---
+>       - addr: 127.0.0.7

@@ -1,0 +1,125 @@
+From da4e1e34481a7d042a994f5c8edca0915624be0a Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Sun, 23 Oct 2022 18:15:07 +0000
+Subject: [PATCH 05/17] Clean-up patch
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 59 +++++++++++++++++++++---------------------
+ src/udr/nudr-handler.c |  4 +--
+ 2 files changed, 31 insertions(+), 32 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index d2e521658..8229cda45 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -243,47 +243,28 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 
+             AuthenticationInfoResult.supi = udm_ue->supi;
+             AuthenticationInfoResult.auth_type = udm_ue->auth_type;
+-
+-            ogs_random(udm_ue->rand, OGS_RAND_LEN);
+-#if 0
+-            OGS_HEX(tmp[step], strlen(tmp[step]), udm_ue->rand);
+-#if 0
+-            if (step == 0) step = 1; /* For supporting authentication failure */
+-            else step = 0;
+-#endif
+-#endif
+-
+ 	    // Debug
+ 	    ogs_info("Pre milenage generate");
+ 	    ogs_info("OGS_KEY_LEN in bytes: %d (%d bits)",OGS_KEY_LEN,OGS_KEY_LEN*8);
+ 	    ogs_info("Generate CK, IK and others: UE supi %s, suci %s",udm_ue->supi,udm_ue->suci);
+ 	    ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
+-            ogs_info("rand %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:",udm_ue->rand[0],udm_ue->rand[1],udm_ue->rand[2],udm_ue->rand[3],udm_ue->rand[4],udm_ue->rand[5],udm_ue->rand[6],udm_ue->rand[7],udm_ue->rand[8],udm_ue->rand[9],udm_ue->rand[10],udm_ue->rand[11],udm_ue->rand[12],udm_ue->rand[13],udm_ue->rand[14],udm_ue->rand[15]);
+-            ogs_hex_to_ascii(udm_ue->sqn, sizeof(udm_ue->sqn),
++           ogs_hex_to_ascii(udm_ue->sqn, sizeof(udm_ue->sqn),
+ 		             sqn_string, sizeof(sqn_string));
+ 	    ogs_info("sqn: %s",sqn_string);
+ 	    ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
+ 			                                 rand_string, sizeof(rand_string));
+-	    ogs_info("rand: %s",rand_string);
+-
++            ogs_random(udm_ue->rand, OGS_RAND_LEN);
++#if 0
++            OGS_HEX(tmp[step], strlen(tmp[step]), udm_ue->rand);
++#if 0
++            if (step == 0) step = 1; /* For supporting authentication failure */
++            else step = 0;
++#endif
++#endif
+ 
+-	    milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
++            milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+ 
+-	    // Debug: hex_to_ascii called here to print autn and more
+-            ogs_info("Post milenage generate");
+-	    ogs_hex_to_ascii(autn, sizeof(autn),
+-		             autn_string, sizeof(autn_string));
+-	    ogs_info("autn: %s",autn_string);
+-            ogs_hex_to_ascii(ck, sizeof(ck),
+-		             ck_string, sizeof(ck_string));
+-	    ogs_info("ck: %s",ck_string);
+-            ogs_hex_to_ascii(ik, sizeof(ik),
+-		             ik_string, sizeof(ik_string));
+-	    ogs_info("ik: %s",ik_string);
+-            ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
+-
+-
+ 
+             // rmz: insert here parallel concep
+ 	    enclave_milenage_generate();
+@@ -304,7 +285,25 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+ 
+-	    ogs_info("Preparing AV");
++	    // Debug: hex_to_ascii called here to print autn and more
++            ogs_info("Post milenage generate");
++            ogs_info("rand %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:",udm_ue->rand[0],udm_ue->rand[1],udm_ue->rand[2],udm_ue->rand[3],udm_ue->rand[4],udm_ue->rand[5],udm_ue->rand[6],udm_ue->rand[7],udm_ue->rand[8],udm_ue->rand[9],udm_ue->rand[10],udm_ue->rand[11],udm_ue->rand[12],udm_ue->rand[13],udm_ue->rand[14],udm_ue->rand[15]);
++	    ogs_info("rand: %s",rand_string);
++
++	    ogs_hex_to_ascii(autn, sizeof(autn),
++		             autn_string, sizeof(autn_string));
++	    ogs_info("autn: %s",autn_string);
++            ogs_hex_to_ascii(ck, sizeof(ck),
++		             ck_string, sizeof(ck_string));
++	    ogs_info("ck: %s",ck_string);
++            ogs_hex_to_ascii(ik, sizeof(ik),
++		             ik_string, sizeof(ik_string));
++	    ogs_info("ik: %s",ik_string);
++            ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",udm_ue->sqn[0],udm_ue->sqn[1],udm_ue->sqn[2],udm_ue->sqn[3],udm_ue->sqn[4],udm_ue->sqn[5]);
++
++
++
++	    ogs_info("Preparing AV: rand, xres_start, authn, kausf");
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+diff --git a/src/udr/nudr-handler.c b/src/udr/nudr-handler.c
+index 602203fe6..b74986e00 100644
+--- a/src/udr/nudr-handler.c
++++ b/src/udr/nudr-handler.c
+@@ -95,7 +95,7 @@ bool udr_nudr_dr_handle_subscription_authentication(
+                     amf_string;
+             ogs_info("Got amf from auth_info");
+ 
+-	    if (!auth_info.use_opc) {
++            if (!auth_info.use_opc) {
+ 		ogs_info("Calling milenage_opc to get opc from op and k");
+                 milenage_opc(auth_info.k, auth_info.op, auth_info.opc);
+ 	    }
+@@ -112,7 +112,7 @@ bool udr_nudr_dr_handle_subscription_authentication(
+             AuthenticationSubscription.sequence_number = &SequenceNumber;
+             ogs_info("Got sqn from auth_info");
+ 
+-	    memset(&sendmsg, 0, sizeof(sendmsg));
++            memset(&sendmsg, 0, sizeof(sendmsg));
+ 
+             ogs_assert(AuthenticationSubscription.authentication_method);
+             sendmsg.AuthenticationSubscription =
+-- 
+2.40.1
+

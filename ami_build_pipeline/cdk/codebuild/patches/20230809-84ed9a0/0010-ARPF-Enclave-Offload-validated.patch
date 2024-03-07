@@ -1,0 +1,189 @@
+From c9908a384484c38b2561f2fd84bacfb770d39ea2 Mon Sep 17 00:00:00 2001
+From: rmz <rmz@amazon.ch>
+Date: Mon, 24 Oct 2022 00:11:03 +0000
+Subject: [PATCH 10/16] ARPF Enclave Offload validated
+
+Signed-off-by: rmz <rmz@amazon.ch>
+---
+ src/udm/nudr-handler.c | 81 +++++++++++++++++++++++++-----------------
+ src/udm/nudr-handler.h |  4 +--
+ 2 files changed, 51 insertions(+), 34 deletions(-)
+
+diff --git a/src/udm/nudr-handler.c b/src/udm/nudr-handler.c
+index 15af33969..20e1b8324 100644
+--- a/src/udm/nudr-handler.c
++++ b/src/udm/nudr-handler.c
+@@ -24,34 +24,34 @@
+ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+                                   uint8_t* sqn,
+                                   char* serving_network_name,
+-                                  uint8_t* rand,
+-                                  uint8_t* xres, uint8_t* autn, uint8_t* kausf)
++                                  uint8_t* rand_5gs,
++                                  char* rand_string, char* xres_star_string, char* autn_string, char* kausf_string)
+ {
+     int rv = 0;
+     struct sockaddr_vm vm_addr;
+     int sock_fd = 0;
+ 
+-    char amf_string[OGS_KEYSTRLEN(OGS_AMF_LEN)];
+-    char sqn_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
+-    char rand_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++    char amf_input_string[OGS_KEYSTRLEN(OGS_AMF_LEN)];
++    char sqn_input_string[OGS_KEYSTRLEN(OGS_SQN_LEN)];
++    char rand_input_string[OGS_KEYSTRLEN(OGS_RAND_LEN)];
+ 
+-    ogs_hex_to_ascii(amf, sizeof(amf_string),amf_string, sizeof(amf_string));
+-    ogs_hex_to_ascii(sqn, sizeof(sqn_string),sqn_string, sizeof(sqn_string));
+-    ogs_hex_to_ascii(rand, sizeof(rand_string),rand_string, sizeof(rand_string));
++    ogs_hex_to_ascii(amf, sizeof(amf_input_string),amf_input_string, sizeof(amf_input_string));
++    ogs_hex_to_ascii(sqn, sizeof(sqn_input_string),sqn_input_string, sizeof(sqn_input_string));
++    ogs_hex_to_ascii(rand_5gs, sizeof(rand_input_string),rand_input_string, sizeof(rand_input_string));
+ 
+     ogs_warn("Enclave offloading");
+     ogs_info("json inputs for %s", supi);
+-    ogs_info("amf: %s",amf_string);
+-    ogs_info("sqn: %s",sqn_string);
++    ogs_info("amf: %s",amf_input_string);
++    ogs_info("sqn: %s",sqn_input_string);
+     ogs_info("snn: %s",serving_network_name);
+-    ogs_info("rand: %s",rand_string);
++    ogs_info("rand: %s",rand_input_string);
+     // Alternative
+     ogs_info("sqn %02X:%02X:%02X:%02X:%02X:%02X",sqn[0],sqn[1],sqn[2],sqn[3],sqn[4],sqn[5]);
+ 
+     // SUPI: 20, AMF: 4, SQN: 12, SNN: 32, RAND: 32
+     char msg[256];
+-    sprintf(msg,"{ \"command\": \"get-authentication-vector\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"%s\", \"sqn\": \"%s\", \"snn\": \"%s\", \"rand\": \"%s\" }",supi,amf_string,sqn_string,serving_network_name,rand_string);
+- 
++    sprintf(msg,"{ \"command\": \"get-authentication-vector\", \"source\": \"udm\", \"supi\": \"%s\", \"amf\": \"%s\", \"sqn\": \"%s\", \"snn\": \"%s\", \"rand\": \"%s\" }",supi,amf_input_string,sqn_input_string,serving_network_name,rand_input_string);
++
+     sock_fd = socket(AF_VSOCK, SOCK_STREAM, 0);
+     memset(&vm_addr, 0, sizeof(struct sockaddr_vm));
+     vm_addr.svm_family = AF_VSOCK;
+@@ -74,6 +74,20 @@ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+       ogs_info("Received %lu bytes:\n%.*s\n", msg_len, (int)msg_len,buf);
+     }
+     close(sock_fd);
++    // Parse the result
++    // Typicaly result
++    // {"Status": "success", "Response": {"rand": "5c4b9b49ba2b367ad72e7eefd3f292c9", "xres_star": "d4fb1a28f9c59f7bd7f804f4a2865766", "autn": "a0062653c2fe800073996304ad725f16", "kausf": "ff34ef16d6e9eb1b8f7fec1b0a3ae8a4856ce188d42cd496579992061f215ce0"}}
++    char result[20];
++    sscanf( buf, "{\"Status\": \"%7c\"", (char *)&result );
++    if (strcmp(result,"success")==0) {
++      ogs_warn("Received \"success\" from Enclave. Parse further");
++      sscanf(buf, "{\"Status\": \"success\", \"Response\": {\"rand\": \"%32c\", \"xres_star\": \"%32c\", \"autn\": \"%32c\", \"kausf\": \"%64c\"}}",rand_string,xres_star_string,autn_string,kausf_string);
++      ogs_info("Enclave xrs: %.32s",xres_star_string);
++      ogs_info("Enclave autn: %.32s",autn_string);
++      ogs_info("Enclave kausf: %.64s",kausf_string);
++    } else {
++       return OGS_ERROR;
++    }
+     return OGS_OK;
+ }
+ 
+@@ -119,6 +133,10 @@ bool udm_nudr_dr_handle_subscription_authentication(
+     char autn_string[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
+     char kausf_string[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
+     char xres_star_string[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
++    char rand_string_enclave[OGS_KEYSTRLEN(OGS_RAND_LEN)];
++    char autn_string_enclave[OGS_KEYSTRLEN(OGS_AUTN_LEN)];
++    char kausf_string_enclave[OGS_KEYSTRLEN(OGS_SHA256_DIGEST_SIZE)];
++    char xres_star_string_enclave[OGS_KEYSTRLEN(OGS_MAX_RES_LEN)];
+     char ck_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
+     char ik_string[OGS_KEYSTRLEN(OGS_KEY_LEN)]; // Debug
+ 
+@@ -259,8 +277,6 @@ bool udm_nudr_dr_handle_subscription_authentication(
+ 
+             AuthenticationInfoResult.supi = udm_ue->supi;
+             AuthenticationInfoResult.auth_type = udm_ue->auth_type;
+-	    // Debug
+-	    ogs_info("Pre milenage generate");
+ 
+             ogs_random(udm_ue->rand, OGS_RAND_LEN);
+ #if 0
+@@ -270,10 +286,11 @@ bool udm_nudr_dr_handle_subscription_authentication(
+             else step = 0;
+ #endif
+ #endif
+-            // rmz: insert here parallel concep
++            // rmz: Offload to Enclave
++	    ogs_assert(udm_ue->serving_network_name);
+ 	    enclave_generate_auth_vector(udm_ue->supi, udm_ue->amf, udm_ue->sqn,
+                                          udm_ue->serving_network_name, udm_ue->rand,
+-                                         xres, autn, kausf);
++                                         rand_string_enclave,xres_star_string_enclave, autn_string_enclave, kausf_string_enclave);
+ 
+             milenage_generate(udm_ue->opc, udm_ue->amf, udm_ue->k, udm_ue->sqn,
+                     udm_ue->rand, autn, ik, ck, ak, xres, &xres_len);
+@@ -292,37 +309,37 @@ bool udm_nudr_dr_handle_subscription_authentication(
+                     udm_ue->serving_network_name, udm_ue->rand, xres, xres_len,
+                     xres_star);
+ 
+-	    // Debug: hex_to_ascii called here to print autn and more
+-            ogs_info("Post milenage generate");
+-
+-	    ogs_info("Preparing AV: rand, xres_star, autn, kausf");
+             memset(&AuthenticationVector, 0, sizeof(AuthenticationVector));
+             AuthenticationVector.av_type = OpenAPI_av_type_5G_HE_AKA;
+ 
+             ogs_hex_to_ascii(udm_ue->rand, sizeof(udm_ue->rand),
+                     rand_string, sizeof(rand_string));
+-            AuthenticationVector.rand = rand_string;
++            //AuthenticationVector.rand = rand_string;
++	    AuthenticationVector.rand = rand_string_enclave;
+             ogs_hex_to_ascii(xres_star, sizeof(xres_star),
+                     xres_star_string, sizeof(xres_star_string));
+-            AuthenticationVector.xres_star = xres_star_string;
++            //AuthenticationVector.xres_star = xres_star_string;
++	    AuthenticationVector.xres_star = xres_star_string_enclave;
+             ogs_hex_to_ascii(autn, sizeof(autn),
+                     autn_string, sizeof(autn_string));
+-            AuthenticationVector.autn = autn_string;
++            //AuthenticationVector.autn = autn_string;
++	    AuthenticationVector.autn = autn_string_enclave;
+             ogs_hex_to_ascii(kausf, sizeof(kausf),
+                     kausf_string, sizeof(kausf_string));
+-            AuthenticationVector.kausf = kausf_string;
++            //AuthenticationVector.kausf = kausf_string;
++	    AuthenticationVector.kausf = kausf_string_enclave;
+ 
+-	    //ogs_info("kausf hex: %s", kausf);
++	    // Debug
+             ogs_hex_to_ascii(ck, sizeof(ck),
+ 	             ck_string, sizeof(ck_string));
+             ogs_hex_to_ascii(ik, sizeof(ik),
+ 		             ik_string, sizeof(ik_string));
+-	    ogs_info("ik: %s",ik_string);
+-	    ogs_info("ck: %s",ck_string);
+-	    ogs_info("rand: %s",rand_string);
+-	    ogs_info("xres_star: %s",xres_star_string);
+-            ogs_info("autn: %s",autn_string);
+-            ogs_info("kausf: %s", kausf_string);
++	    ogs_info("5gs ik: %s",ik_string);
++	    ogs_info("5gs ck: %s",ck_string);
++	    ogs_info("5gs rand: %s",rand_string);
++	    ogs_info("5gs xres_star: %s",xres_star_string);
++            ogs_info("5gs autn: %s",autn_string);
++            ogs_info("5gs kausf: %s", kausf_string);
+ 
+             AuthenticationInfoResult.authentication_vector =
+                 &AuthenticationVector;
+diff --git a/src/udm/nudr-handler.h b/src/udm/nudr-handler.h
+index cb560b904..aa61226a6 100644
+--- a/src/udm/nudr-handler.h
++++ b/src/udm/nudr-handler.h
+@@ -35,8 +35,8 @@ bool udm_nudr_dr_handle_subscription_provisioned(
+ 
+ bool enclave_generate_auth_vector(char* supi, uint8_t* amf,
+                                   uint8_t* sqn, char* serving_network_name,
+-                                  uint8_t* rand,
+-                                  uint8_t* xres, uint8_t* autn, uint8_t* kausf);
++                                  uint8_t* rand_5gs,
++                                  char* rand, char* xres, char* autn, char* kausf);
+ 
+ #ifdef __cplusplus
+ }
+-- 
+2.41.0
+
