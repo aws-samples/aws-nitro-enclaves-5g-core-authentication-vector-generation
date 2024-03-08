@@ -1,6 +1,6 @@
 # A 5G Network with AWS Nitro Enclaves Authentication Credential Repository and Processing Function
 
-This project demonstrates how to deploy a 3GPP Authentication Credential Repository and Processing Function (ARPF) running within an AWS Nitro Enclaves.
+This project demonstrates how to deploy a 3GPP Authentication Credential Repository and Processing Function (ARPF) running within a pool of AWS Nitro Enclaves.
 
 
 
